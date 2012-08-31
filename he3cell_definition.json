@@ -1,0 +1,63 @@
+[
+    {
+        "P0": "0.8", 
+        "sigmanl": "1.0", 
+        "name": "Maverick", 
+        "Psm": "0.97", 
+        "tf_str": "Fri Feb 18 14:46:57 2011", 
+        "measurements": [
+            {
+                "ROI": {
+                    "xmin": 300, 
+                    "ymin": 100, 
+                    "ymax": 512, 
+                    "xmax": 325
+                }, 
+                "timestamp": "Fri Feb 18 14:42:55 2011", 
+                "value": 405, 
+                "filename": "blah0000.cg1", 
+                "polarization": "unpolarized", 
+                "datafolder": "/home/NCNRWIN/cg1/blah", 
+                "label": "T_empty", 
+                "cell in": false
+            }, 
+            {
+                "ROI": {
+                    "xmin": 300, 
+                    "ymin": 100, 
+                    "ymax": 512, 
+                    "xmax": 325
+                }, 
+                "timestamp": "Fri Feb 18 14:45:49 2011", 
+                "value": 200, 
+                "filename": "blah0001.cg1", 
+                "polarization": "unpolarized", 
+                "cell in": true, 
+                "label": "T_unpolarized", 
+                "datafolder": "/home/NCNRWIN/cg1/blah"
+            }, 
+            {
+                "ROI": {
+                    "xmin": 300, 
+                    "ymin": 100, 
+                    "ymax": 512, 
+                    "xmax": 325
+                }, 
+                "timestamp": "Fri Feb 18 14:46:57 2011", 
+                "value": 26, 
+                "filename": "blah0002.cg1", 
+                "polarization": "unpolarized", 
+                "datafolder": "/home/NCNRWIN/cg1/blah", 
+                "label": "T_down_down", 
+                "cell in": true
+            }
+        ], 
+        "id_num": "1", 
+        "t0_str": "Fri Feb 18 14:42:55 2011", 
+        "T0": "0.9", 
+        "Pf": "0.99", 
+        "t0": "0", 
+        "tf": "0", 
+        "Gamma": "300.0"
+    }
+]
