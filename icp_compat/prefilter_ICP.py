@@ -94,13 +94,13 @@ def generate_prefilter(instrument_controller, log_unfiltered = False):
     return prefilter_ICP
 
 def activate_prefilter(instrument_controller, log_unfiltered = False):
-    from IPython.iplib import InteractiveShell 
+    from IPython import InteractiveShell 
     """Rebind the ICP filter to be the new IPython prefilter, 
     with a callback to the instrument_controller write() method for logging"""
     InteractiveShell.prefilter = generate_prefilter(instrument_controller, log_unfiltered)
 
 def deactivate_prefilter():
-    from IPython.iplib import InteractiveShell 
+    from IPython import InteractiveShell 
     """Reset the filter."""
     InteractiveShell.prefilter = InteractiveShell._prefilter
 

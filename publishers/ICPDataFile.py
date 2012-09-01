@@ -1,5 +1,6 @@
 from __future__ import with_statement
-import struct, ibuffer, glob, time, os
+import struct, glob, time, os
+from pyrecs.icp_compat import ibuffer
 #from InstrumentController import Publisher
 from FileManifest import FileManifest
 from copy import copy, deepcopy
@@ -566,7 +567,7 @@ class ICPDataFile:
         Hnow = params.get('h0', None)
         if Hnow is not None:
             outstr += '%11g ' % Hnow
-        if timestamp=None:
+        if timestamp==None:
             outstr += time.srtftime(self.time_fmt)
         else:
             outstr += str(timestamp)
