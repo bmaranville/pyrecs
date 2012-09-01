@@ -67,12 +67,17 @@ class GnuplotPublisher(Publisher):
     def __init__(self):
         self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
         (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+    
+    def publish_start(self, state, scan_definition, **kwargs):
+        """ called to record the start time of the measurement """
+        self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
         
     def publish_datapoint(self, state, scan_def):
         outstr = ''
         for movable in scan_def['vary']:
             outstr += '%10.4f    ' % state[movable]
-        outstr += '%14g' % state['result']['counts']
+        outstr += '%14g\n' % state['result']['counts'] 
         with open(self.tmp_path, 'a') as f:
             f.write(outstr)            
         title = scan_def['filename']
@@ -240,7 +245,7 @@ class InstrumentController:
         #self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
         #self.default_publishers = [update_xpeek.XPeekPublisher()]
-        self.default_publishers = []
+        self.default_publishers = [GnuplotPublisher()]
         self.logfilename = self.getNextFilename(time.strftime('%b%d%Y_'), '.LOG')
         self.logwriter = LogWriter(self.logfilename)
         self.get_input = raw_input #defaults to local prompt - override in server
@@ -265,6 +270,7 @@ class InstrumentController:
 
         self.sequence = StringIO() # empty sequence to start
         
+        self.Count = self.PencilCount
         # command alias list: these commands will come in from the filter
         # ICP commands:
         self.pa = self.PrintMotorPos
