@@ -88,11 +88,13 @@ commandserver.allow_none = True
 # need to define these for tab-completion to work in Ipython clients
 def _getAttributeNames():
     return commandserver.system_listMethods()
-commandserver.register_function(_getAttributeNames)
+#commandserver.register_function(_getAttributeNames)
 
 def trait_names():
     return commandserver.system_listMethods()
-commandserver.register_function(trait_names)
+#commandserver.register_function(trait_names)
+
+commandserver.register_function(commandserver.system_listMethods, '__dir__')
 
 def where_am_I_calling_from():
     return commandserver.connected_peer
