@@ -308,4 +308,6 @@ class Motor:
             return 0
              
         
-        
+if __name__ == '__main__':
+    vme = VME('/dev/ttyUSB1')
+    vme.start()     
