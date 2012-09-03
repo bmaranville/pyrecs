@@ -1,15 +1,17 @@
 import struct, time
 from ordered_dict import OrderedDict
+import os
+home_dir = os.environ['HOME']
 
 DEFAULT_VME_PORT = '/dev/ttyUSB0'
 DEBUG = False
 MAXMOTOR = 24
 MAXMOTS = 30
-MOTPOS_BUF = '/home/brian/icp/ICP/cfg/MOTPOS.BUF'
-MOTORS_BUF = '/home/brian/icp/ICP/cfg/MOTORS.BUF'
-INSTR_CFG = '/home/brian/icp/ICP/cfg/INSTR.CFG'
+MOTPOS_BUF = os.path.join(home_dir, 'icp/ICP/cfg/MOTPOS.BUF')
+MOTORS_BUF = os.path.join(home_dir, 'icp/ICP/cfg/MOTORS.BUF')
+INSTR_CFG = os.path.join(home_dir, 'icp/ICP/cfg/INSTR.CFG')
 DEBUG = False
-RS232_CFG = '/home/brian/icp/ICP/cfg/rs232.conf'
+RS232_CFG = os.path.join(home_dir, 'icp/ICP/cfg/rs232.conf')
 
 class InstrumentParameters:
     """ class to handle values stored in ICP config files.  Convert to XML at your leisure"""
