@@ -335,8 +335,8 @@ class InstrumentController:
         """ check to see if motor is in the range of addressable motors """
         @functools.wraps(func)
         def wrapper(*args, **kwds):
-            me = args[0]
             motornum = args[1] if len(args) > 1 else None
+            me = args[0]
             num_motors = me.num_motors # self!!
             if (motornum is not None) and ((motornum <= 0) or (motornum > num_motors)):
                 me.write('requested motor is out of range')
@@ -605,7 +605,6 @@ class InstrumentController:
         #    self._aborted = False
 
 
-    @validate_motor
     def moveMultiMotor(self, motornum_list, soft_position_list, check_limits = True, reraise_exceptions = True, disable=AUTO_MOTOR_DISABLE):
         """ send motor move command to VME and wait for it to complete motion """
         motornum_list = list(motornum_list)
