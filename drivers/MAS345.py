@@ -37,12 +37,13 @@ class MAS345:
     
     def readValue(self):
         value_string = self.sendCMD()
+        mode = value_string[:2]
         units = (value_string[-4:]).strip()
         if value_string[5:8] == 'O.L':
             value = numpy.inf
         else: 
             value = float(value_string[3:-4])
-        return value, units
+        return mode, value, units
         
 class Photometer:
     ranges = { 1: {'string': '20uW', 'value': 20e-6}, \
@@ -69,7 +70,7 @@ class Photometer:
         return self.ranges.get(self._range_index, self.ranges[4])['value']
         
     def readValue(self):
-        value, units = self.voltmeter.readValue()
+        mode, value, units = self.voltmeter.readValue()
         return value * self.getRangeValue(), self.getRangeString()
         
         
