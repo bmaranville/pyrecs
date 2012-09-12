@@ -1,9 +1,10 @@
 import serial
 DEBUG = False
+port = '/dev/ttyUSB1'
 
 class MAS345:
     """Talk to the Sinometer MAS-345 box"""
-    def __init__(self, port):
+    def __init__(self, port=port):
         #self.serial = serial.Serial(port, 600, parity='N', bytesize=7, stopbits=2, rtscts=False, xonxoff=False, dsrdtr=False, timeout=2)
         self.serial = serial.Serial(port, 600, parity='N', bytesize=7, timeout=1)
         self.newline_str = '\r'
@@ -33,4 +34,39 @@ class MAS345:
         self.serial.flush()
         return reply.rstrip()
     
+    def readValue(self):
+        value_string = self.sendCMD()
+        units = (value_string[-4:]).strip()
+        value = float(value_string[3:-4])
+        return value, units
+        
+class Photometer:
+    ranges = { 1: {'string': '20uW', 'value': 20e-6}, \
+               2: {'string': '200uW', 'value': 200e-6}, \
+               3: {'string': '2mW', 'value': 2e-3}, \
+               4: {'string': '20mW', 'value': 20e-3} }
+            
+    """ Read out the photometer using the Sinometer voltmeter """
+    def __init__(self, range_setting=4, voltmeter_port=port):
+        self.voltmeter = MAS345(voltmeter_port)
+        self.setRangeIndex(range_setting)
+        
+    def setRangeIndex(self, range_index):
+        if not range_index in self.ranges: range_index = 4
+        self._range_index = range_index
+        
+    def getRangeIndex(self):
+        return self._range_index
+    
+    def getRangeString(self):
+        return self.ranges.get(self._range_index, self.ranges[4])['string']
+        
+    def getRangeValue(self):
+        return self.ranges.get(self._range_index, self.ranges[4])['value']
+        
+    def readValue(self):
+        value, units = self.voltmeter.readValue()
+        return value * self.getRangeValue(), self.getRangeString()
+        
+        
     

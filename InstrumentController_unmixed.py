@@ -292,6 +292,8 @@ class InstrumentController:
         self.rsf = self.RunICPSequenceFile
         self.rs = self.RunSequence
         self.dp = self.DrivePeak #New!
+        self.ph = self.pr = self.sr = lambda x: None # photometer commands
+        
         
         self.device_registry = {'motor': 
                                 {'names': self.motor_names, 'updater': self.DriveMotorByName },

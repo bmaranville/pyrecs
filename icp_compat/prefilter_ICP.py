@@ -10,9 +10,9 @@ INT_REGEXP = r'([0-9]+)'
 SEP = r'[ \t]*[,][ \t]*'
 # different types of commands: 0 argument (pa, pt etc), enable/disable(with plus or minus), then 1, 2, 3, 4, and 5 argument commands
 # [-+]?([0-9]*\.[0-9]+|[0-9]+)
-ICP_NOARG = re.compile(r'^[ \t]*(pasd|pa|pt|pm|pfcal|pu|pl|statline|mon|rs|dp)[ \t]*$', re.IGNORECASE)
-ICP_ENDIS = re.compile(r'^[ \t]*(a|w|flm|fla|p)[ \t]*([-+*])[ \t]*$', re.IGNORECASE)
-ICP_1ARG = re.compile(r'[ \t]*(pa|ct|pfcal|fix|rel|xmin|xmax|ymin|ymax|ri)[ \t]*[,=]?[ \t]*'+FP_REGEXP+r'[ \t]*$', re.IGNORECASE)
+ICP_NOARG = re.compile(r'^[ \t]*(pasd|pa|pt|pm|pfcal|pu|pl|statline|mon|rs|dp|pr)[ \t]*$', re.IGNORECASE)
+ICP_ENDIS = re.compile(r'^[ \t]*(a|w|flm|fla|p|ph)[ \t]*([-+*])[ \t]*$', re.IGNORECASE)
+ICP_1ARG = re.compile(r'[ \t]*(pa|ct|pfcal|fix|rel|xmin|xmax|ymin|ymax|ri|sr)[ \t]*[,=]?[ \t]*'+FP_REGEXP+r'[ \t]*$', re.IGNORECASE)
 ICP_2ARG = re.compile(r'[ \t]*(init|set|d|u|l|iset|vset)[ \t]*' + INT_REGEXP + r'[ \t]*[,=]?[ \t]*'+FP_REGEXP +r'[ \t]*$', re.IGNORECASE)
 ICP_3ARG = re.compile(r'[ \t]*(fp)[ \t]*[,=]?[ \t]*'+INT_REGEXP + SEP + FP_REGEXP + SEP + FP_REGEXP + r'[ \t]*$', re.IGNORECASE)   
 ICP_4ARG = re.compile(r'^[ \t]*(fp|iscan)[ \t]*[,=]?[ \t]*'+INT_REGEXP + SEP + FP_REGEXP + SEP + FP_REGEXP + SEP + FP_REGEXP + r'[ \t]*$', re.IGNORECASE)
