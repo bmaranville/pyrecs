@@ -1,6 +1,7 @@
 import serial
 DEBUG = False
 port = '/dev/ttyUSB1'
+import numpy
 
 class MAS345:
     """Talk to the Sinometer MAS-345 box"""
@@ -37,7 +38,10 @@ class MAS345:
     def readValue(self):
         value_string = self.sendCMD()
         units = (value_string[-4:]).strip()
-        value = float(value_string[3:-4])
+        if value_string[5:8] == 'O.L':
+            value = numpy.inf
+        else: 
+            value = float(value_string[3:-4])
         return value, units
         
 class Photometer:
