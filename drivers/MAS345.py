@@ -52,7 +52,7 @@ class Photometer:
         self.setRangeIndex(range_setting)
         
     def setRangeIndex(self, range_index):
-        if not range_index in self.ranges: range_index = 4
+        if not range_index in self.ranges: return
         self._range_index = range_index
         
     def getRangeIndex(self):
