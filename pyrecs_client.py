@@ -1,5 +1,5 @@
-from IPython.iplib import InteractiveShell
-import prefilter_ICP
+from IPython import InteractiveShell
+from icp_compat import prefilter_ICP
 import signal
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer

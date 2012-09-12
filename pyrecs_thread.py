@@ -4,19 +4,18 @@ import numpy # not really using for much except float32 and int32
 import signal # need this to make sure interrupts only go to main thread!
 import threading
 import tempfile, os
-from VME import VME
+from drivers.VME import VME
 from subprocess import Popen, PIPE
 from InstrumentParameters import InstrumentParameters
-from rs232GPIB import rs232GPIB
-from FlipperDriver import FlipperPS
-from PSD import BrookhavenDetector
+from drivers.rs232gpib import RS232GPIB
+from drivers.FlipperDriver import FlipperPS
+from drivers.brookhaven_psd import BrookhavenDetector
 from fit_gausspeak import FitGauss
 from StringIO import StringIO
 import exceptions
-from IPython.iplib import InteractiveShell
-import ibuffer
-import prefilter_ICP   
-import ICPDataFile
+from IPython import InteractiveShell
+from icp_compat import prefilter_ICP, ibuffer
+from publishers import ICPDataFile
 
 DEBUG = False
 

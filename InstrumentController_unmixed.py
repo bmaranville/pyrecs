@@ -67,12 +67,17 @@ class GnuplotPublisher(Publisher):
     def __init__(self):
         self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
         (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+    
+    def publish_start(self, state, scan_definition, **kwargs):
+        """ called to record the start time of the measurement """
+        self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
         
     def publish_datapoint(self, state, scan_def):
         outstr = ''
         for movable in scan_def['vary']:
             outstr += '%10.4f    ' % state[movable]
-        outstr += '%14g' % state['result']['counts']
+        outstr += '%14g\n' % state['result']['counts'] 
         with open(self.tmp_path, 'a') as f:
             f.write(outstr)            
         title = scan_def['filename']
@@ -240,7 +245,7 @@ class InstrumentController:
         #self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
         #self.default_publishers = [update_xpeek.XPeekPublisher()]
-        self.default_publishers = []
+        self.default_publishers = [GnuplotPublisher()]
         self.logfilename = self.getNextFilename(time.strftime('%b%d%Y_'), '.LOG')
         self.logwriter = LogWriter(self.logfilename)
         self.get_input = raw_input #defaults to local prompt - override in server
@@ -265,6 +270,7 @@ class InstrumentController:
 
         self.sequence = StringIO() # empty sequence to start
         
+        self.Count = self.PencilCount
         # command alias list: these commands will come in from the filter
         # ICP commands:
         self.pa = self.PrintMotorPos
@@ -324,6 +330,20 @@ class InstrumentController:
         This is specific to IPython """
         #_ip.magic('exit')
         exit()
+    
+    def validate_motor(func):
+        """ check to see if motor is in the range of addressable motors """
+        @functools.wraps(func)
+        def wrapper(*args, **kwds):
+            motornum = args[1] if len(args) > 1 else None
+            me = args[0]
+            num_motors = me.num_motors # self!!
+            if (motornum is not None) and ((motornum <= 0) or (motornum > num_motors)):
+                me.write('requested motor is out of range')
+                return
+            else:
+                return func(*args, **kwds)
+        return wrapper
         
     def register_writer(self, writer):
         self.writers.add(writer)
@@ -485,18 +505,19 @@ class InstrumentController:
 #        f_out.write(templine.read() + '\n')
 #        f_out.close()
     
-    
+    @validate_motor
     def GetHardMotorPos(self, motornum):
         hard_pos = self.mc.GetMotorPos(motornum)
         self.ip.SetHardMotorPos(motornum, hard_pos)
         return hard_pos
         
+    @validate_motor
     def GetMotorPos(self, motornum):
         # default to retrieving the soft motor pos: 
         # this is what we need for writing data files, driving motors etc.
         return self.GetSoftMotorPos(motornum)
-        
-        
+            
+    @validate_motor
     def GetSoftMotorPos(self, motornum, use_stored = False):
         if use_stored:
             hard_pos = self.ip.GetHardMotorPos(motornum)
@@ -506,7 +527,7 @@ class InstrumentController:
         soft_pos = hard_pos - offset
         return soft_pos
   
-    
+    @validate_motor
     def PrintMotorPos(self, motornum = None, use_stored = False):
         """ retrieve the motor position from the motor controller 
         to mimic the way ICP works, if no argument is given, get all values """
@@ -520,7 +541,8 @@ class InstrumentController:
             self.write(' Soft: A%02d=%8.3f\n Hard: A%02d=%8.3f\n' % (motornum, soft_pos, motornum, hard_pos))
         else:  # no motor specified - get them all
             self.PrintAllMotorPos()
-       
+    
+    @validate_motor   
     def GetStoredSoftMotorPos(self, motornum):
         """ get motor position (soft) from stored backend value """
         hard_pos = self.ip.GetHardMotorPos(motornum)
@@ -528,29 +550,32 @@ class InstrumentController:
         soft_pos = hard_pos - offset
         return soft_pos
          
-        
+    @validate_motor    
     def SetHardMotorPos(self, motornum, pos):
         """ initialize the hardware motor position """
         self.mc.SetMotorPos(motornum, pos) # update the motor controller
         self.ip.SetHardMotorPos(motornum, pos) # update the MOTORS.BUF file
         
-    
+    @validate_motor
     def SetSoftMotorPos(self, motornum, pos):
         """ initialize the soft motor position """
         hard_pos = self.GetHardMotorPos(motornum)
         new_offset = hard_pos - pos
         self.ip.SetSoftMotorOffset(motornum, new_offset) # update the MOTORS.BUF file
     
+    @validate_motor
     def fix(self, motornum):
         """ set the motor to "fixed", which means it won't be moved during an ibuffer scan """
         self.ip.SetMotorFixed(motornum)
         #self.fixed_motors.add(motornum)
         
+    @validate_motor
     def rel(self, motornum):
         """ release a previously "fixed" motor """
         self.ip.SetMotorReleased(motornum)
         #self.fixed_motors.remove(motornum)
     
+    @validate_motor
     def moveMotor(self, motornum, position, check_limits = True, reraise_exceptions = True):
         """ send motor move command to VME and wait for it to complete motion """
         # first, make sure we should move:
@@ -580,7 +605,6 @@ class InstrumentController:
         #    self._aborted = False
 
 
-    
     def moveMultiMotor(self, motornum_list, soft_position_list, check_limits = True, reraise_exceptions = True, disable=AUTO_MOTOR_DISABLE):
         """ send motor move command to VME and wait for it to complete motion """
         motornum_list = list(motornum_list)
@@ -635,8 +659,8 @@ class InstrumentController:
         recursive_motor_move(motornum_list, hard_position_list, soft_position_list)
         #if not reraise_exceptions: # reset the abort flag
         #    self._aborted = False
-
        
+    @validate_motor
     def DriveMotor(self, motornum, position, do_backlash = True, check_limits = True, reraise_exceptions = False, increment=False):
         if increment:
             position = self.GetMotorPos(motornum) + position
@@ -724,7 +748,7 @@ class InstrumentController:
             
         return
         
-            
+    @validate_motor        
     def DragCount(self, motornum, start_angle, stop_angle, reraise_exceptions = False):
         """ new, non-ICP function: 
         start counting, move detector from start_angle to stop_angle,
@@ -760,7 +784,7 @@ class InstrumentController:
         psd.AIM_SAVE('asd.raw')
         return data
     
-    
+    @validate_motor
     def RapidScan(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
         """ new, non-ICP function: count while moving.
                 returns: (position, counts, elapsed_time) """
@@ -905,11 +929,11 @@ class InstrumentController:
         for i in range(self.num_motors):
             self.write('U%d: %.4f\t' % (i+1, result[i]))
         
-    
+    @validate_motor
     def SetLowerLimit(self, motornum, position):
         self.ip.SetLowerLimit(motornum, position)
         
-        
+    @validate_motor    
     def SetUpperLimit(self, motornum, position):
         self.ip.SetUpperLimit(motornum, position)
              
@@ -1091,6 +1115,7 @@ class InstrumentController:
         return
         # end of FindPeak function
         
+    @validate_motor    
     def FindPeak(self, motnum, mrange, mstep, duration=-1, auto_drive_fit = False):
         """the classic ICP function (fp)
         It can be suspended with ctrl-z (ctrl-z again to resume)

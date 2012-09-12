@@ -77,7 +77,7 @@ class VME:
             m = int(command_pieces[1])
             self.scaler_time_expiration = time.time() + (m/1000.0)
             self.scaler_status = 1
-            self.scaler_time = t
+            self.scaler_time = m/1000.0
             self.write_one('Counting Started')
         elif command_pieces[0] == 'status':
             if self.scaler_status == 0:
@@ -308,4 +308,6 @@ class Motor:
             return 0
              
         
-        
+if __name__ == '__main__':
+    vme = VME('/dev/ttyUSB1')
+    vme.start()     
