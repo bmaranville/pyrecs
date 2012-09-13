@@ -64,9 +64,10 @@ class Fitter:
         
 
 class GnuplotPublisher(Publisher):
-    def __init__(self):
+    def __init__(self, auto_poisson_errorbars=True):
         self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
         (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        self.auto_poisson_errorbars = auto_poisson_errorbars
     
     def publish_start(self, state, scan_definition, **kwargs):
         """ called to record the start time of the measurement """
@@ -81,7 +82,10 @@ class GnuplotPublisher(Publisher):
         with open(self.tmp_path, 'a') as f:
             f.write(outstr)            
         title = scan_def['filename']
-        self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+        if self.auto_poisson_errorbars:
+            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+        else:
+            self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
         
     def publish_end(self, state, scan_def):
         title = scan_def['filename']
@@ -90,10 +94,16 @@ class GnuplotPublisher(Publisher):
             self.plot.stdin.write('f(x) = %s \n' % fit_params['fit_func'])
             for pn in fit_params['pname']:
                 self.plot.stdin.write('%s = %f \n' % (pn, fit_params['result'][pn]))
-            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,title))
+            if self.auto_poisson_errorbars:
+                self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,title))
+            else:
+                self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,title))
             self.plot.stdin.write('f(x) w lines lt 2 lc rgb "red"\n')
         else:
-            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+            if self.auto_poisson_errorbars:
+                self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+            else:
+                self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
             
 class StdoutWriter:
     """ writes output to sys.stdout and flushes """
@@ -245,7 +255,7 @@ class InstrumentController:
         #self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
         #self.default_publishers = [update_xpeek.XPeekPublisher()]
-        self.default_publishers = [GnuplotPublisher()]
+        self.default_publishers = [GnuplotPublisher(auto_poisson_errorbars=False)]
         self.logfilename = self.getNextFilename(time.strftime('%b%d%Y_'), '.LOG')
         self.logwriter = LogWriter(self.logfilename)
         self.get_input = raw_input #defaults to local prompt - override in server
@@ -457,7 +467,7 @@ class InstrumentController:
         """ console command accessed via equivalent ICP command 'ct':
         get counts for a given duration using the active counter """
         result = self.Count(duration)
-        msg = 'count time: %.4f  counts: %d' % (result['count_time'], result['counts'])
+        msg = 'count time: %.4f  counts: %g' % (result['count_time'], result['counts'])
         self.write(msg, file_msg = ('Count: '+ msg))
         
     def PrintMonitor(self, duration=-5):

@@ -1,4 +1,4 @@
-from pyrecs.drivers.MAS345 import MAS345
+from pyrecs.drivers.MAS345 import MAS345, Photometer
 from numpy import sum, array
 import time
 
@@ -16,7 +16,8 @@ class PhotometerControlMixin:
     
     def __init__(self):
         # ICP commands
-        self.ph = self.setPhotometerActive        
+        self.ph = self.setPhotometerActive
+        self.photometer = None        
         self.setPhotometerActive(True) #start with photometer detector by default
         self.pr = self.printPhotometerRange
         self.sr = self.setPhotometerRange
@@ -48,7 +49,7 @@ class PhotometerControlMixin:
         self.write('range set to %s' % self.photometer.getRangeString())
         
     def printPhotometerRange(self):
-        self.write('range setting %d: %s' % (self.photometer.getRangeIndex, self.photometer.getRangeString))
+        self.write('range setting %d: %s' % (self.photometer.getRangeIndex(), self.photometer.getRangeString()))
         
     def PhotometerCount(self, duration, pause_time = 1.0, reraise_exceptions = False):
         """ PhotometerCount(self, duration, pause_time=1.0, reraise_exceptions = False):
@@ -68,7 +69,7 @@ class PhotometerControlMixin:
             while (time.time() - start_time) < pause_time:
                 if self._aborted:
                     print "\nAborting"
-                    self.scaler.AbortCount()
+                    #self.scaler.AbortCount()
                     #if not reraise_exceptions:
                     #    self._aborted = False
                     break
