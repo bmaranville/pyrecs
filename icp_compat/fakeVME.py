@@ -9,8 +9,7 @@ DEBUG = True
     to setup virtual serial ports for communication.  They are linked together. """
 
 class VME:
-    def __init__(self, port):
-        self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+    def __init__(self, num_motors=25):
         self.newline_str = '\r'
         self.ok_str = 'OK:'
         self.read_timeout = 1.0
@@ -23,40 +22,14 @@ class VME:
         self.scaler_time = 0.0
         self.motors = []
         self.cmd_log = []
-        for i in range(25):
+        self.num_motors = num_motors
+        for i in range(self.num_motors):
             self.motors.append(Motor(num = i))
-
-    def start(self):
-        self.alive = True
-        #start serial->console thread
-        self.receiver_thread = threading.Thread(target=self.reader)
-        self.receiver_thread.setDaemon(1)
-        self.receiver_thread.start()
-
-    def stop(self):
-        self.alive = False
-        
-    def reader(self):
-        """loop and copy serial->console"""
-        command = ''
-        while self.alive:
-            data = self.serial.read(1)
-            if data == self.newline_str:
-                sys.stdout.write(command + self.newline_str + '\n')
-                sys.stdout.flush()
-                self.cmd_log.append(command)
-                time.sleep(0.05)
-                self.process(command)
-                command = ''
-            else: 
-                command += data
-                
+    
     def write_one(self, write_str = ''):
-        self.serial.write(self.ok_str + str(write_str) + self.newline_str)
-        self.serial.flush()
-        if DEBUG:
-            print '\t' + self.ok_str + str(write_str) + self.newline_str
-
+        sys.stdout.write(self.ok_str + str(write_str) + self.newline_str)
+        sys.stdout.flush()
+         
     def process(self, command):
         command_pieces = command.split(' ')
         if command_pieces[0] == 'scaler':
@@ -124,26 +97,16 @@ class VME:
         elif command_pieces[0] == 'stop':
             motornum = int(command_pieces[1])
             aborted = self.motors[motornum].AbortMove()
-            self.write_one(aborted)        
+            self.write_one(aborted)   
+            
 
-class sockVME:
-    def __init__(self, sock = '/tmp/com1'):
-        self.serial = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.serial.connect(sock)
-        self.newline_str = '\r'
-        self.ok_str = 'OK:'
-        self.read_timeout = 1.0
-        self.volt_change_rate = 2.0 #volts/second
-        self.curr_change_rate = 1.0 #amps/second
-        self.voltage = None
-        self.current = None
-        self.scaler_time_expiration = 0.0
-        self.scaler_status = 0
-        self.scaler_time = 0.0
-        self.motors = []
-        self.cmd_log = []
-        for i in range(25):
-            self.motors.append(Motor(num = i))
+class serialVME(VME):
+    def __init__(self, port, num_motors=25):
+        VME.__init__(self, num_motors)
+        self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+        self.read = self.serial.read
+        self.write = self.serial.write
+        self.flush = self.serial.flush
 
     def start(self):
         self.alive = True
@@ -159,7 +122,7 @@ class sockVME:
         """loop and copy serial->console"""
         command = ''
         while self.alive:
-            data = self.serial.recv(1)
+            data = self.read(1)
             if data == self.newline_str:
                 sys.stdout.write(command + self.newline_str + '\n')
                 sys.stdout.flush()
@@ -171,73 +134,19 @@ class sockVME:
                 command += data
                 
     def write_one(self, write_str = ''):
-        self.serial.send(self.ok_str + str(write_str) + self.newline_str)
-        #self.serial.flush()
+        self.write(self.ok_str + str(write_str) + self.newline_str)
+        self.flush()
         if DEBUG:
             print '\t' + self.ok_str + str(write_str) + self.newline_str
 
-    def process(self, command):
-        command_pieces = command.split(' ')
-        if command_pieces[0] == 'scaler':
-            self.scaler_command(command_pieces[1:])
-        elif command_pieces[0] == 'motor':
-            self.motor_command(command_pieces[1:])
-            
-    def scaler_command(self, command_pieces):
-        if command_pieces[0] == 'reset':
-            self.write_one('Reset Done')
-        elif command_pieces[0] == 'time':
-            t = float(command_pieces[1])
-            self.scaler_time_expiration = time.time() + t
-            self.scaler_status = 1
-            self.scaler_time = t
-            self.write_one('Counting Started')
-        elif command_pieces[0] == 'status':
-            if self.scaler_status == 0:
-                self.write_one('0')
-            elif self.scaler_status == 1:
-                if time.time() > self.scaler_time_expiration:
-                    self.scaler_status = 0
-                    self.write_one('0')
-                else:
-                    self.write_one('1')
-        elif command_pieces[0] == 'read':
-            self.write_one(str(int(self.scaler_time * 10000)) + ' 45 124 100 0 0 0 0 0 0 0 0 0 0 0 0')
-        elif command_pieces[0] == 'elapsed':
-            self.write_one()
-        elif command_pieces[0] == 'abort':
-            self.write_one(0)
-        
-    def motor_command(self, command_pieces):
-        #print "motor command: " + str(command_pieces) + '\n'
-        if command_pieces[0] == 'position':
-            motornum = int(command_pieces[1])
-            self.write_one('%.4f' % self.motors[motornum].GetPosition())
-        elif command_pieces[0] == 'move':
-            motornum = int(command_pieces[1])
-            new_pos = float(command_pieces[2])
-            self.motors[motornum].SetPosition(new_pos)
-            self.write_one()
-        elif command_pieces[0] == 'motion':
-            motornum = int(command_pieces[1])
-            motion_status = self.motors[motornum].GetMotionStatus()
-            self.write_one(motion_status)
-        elif command_pieces[0] == 'limits':
-            motornum = int(command_pieces[1])
-            motion_limits = self.motors[motornum].GetIsAtLimits()
-            self.write_one(motion_limits)
-        elif command_pieces[0] == 'disable':
-            motornum = int(command_pieces[1])
-            disabled = self.motors[motornum].Disable()
-            self.write_one(disabled)
-        elif command_pieces[0] == 'enable':
-            motornum = int(command_pieces[1])
-            enabled = self.motors[motornum].Enable()
-            self.write_one(enabled)    
-        elif command_pieces[0] == 'stop':
-            motornum = int(command_pieces[1])
-            aborted = self.motors[motornum].AbortMove()
-            self.write_one(aborted)        
+class sockVME(serialVME):
+    def __init__(self, sock = '/tmp/com1', num_motors=25):
+        VME.__init__(self, num_motors)
+        self.serial = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.serial.connect(sock)
+        self.read = self.serial.recv
+        self.write = self.serial.send
+        self.flush = lambda x: None
 
     
 def key_description(character):

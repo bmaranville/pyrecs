@@ -296,6 +296,7 @@ class InstrumentController:
         self.mon = self.PrintMonitor
         self.w = self.setLogging
         self.fp = self.FindPeak
+        self.fpt = self.FindPeakT
         self.l = self.SetLowerLimit
         self.u = self.SetUpperLimit
         self.ri = self.RunIBuffer
@@ -1058,13 +1059,19 @@ class InstrumentController:
         for datapoint in scan:
             pass # everything gets done in the iterator
     
-    def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, comment=None, Fitter=None, auto_drive_fit=False):
+    def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False):
         suffix = '.' + self.ip.GetNameStr().lower()
-        new_filename = self.getNextFilename('fp_%s' % movable, suffix)
-
-        # put this in terms the scanner understands:
-        pos_expression = '%f + (i * %f)' % (mstart, mstep)
-        scan_expr = [(movable, pos_expression)] 
+        if t_scan:
+            new_filename = self.getNextFilename('fpt_%s' % movable, suffix)
+            pos_expression = '%f + (i * %f)' % (mstart, mstep)
+            if t_movable == None: t_movable = 'a%d' % (int(movable[1:])-1,)
+            pos_expression_t = str(movable) + ' / 2.0' 
+            scan_expr = OrderedDict([(movable, pos_expression), (t_movable, pos_expression_t)]) 
+        else:
+            new_filename = self.getNextFilename('fp_%s' % movable, suffix)
+            # put this in terms the scanner understands:
+            pos_expression = '%f + (i * %f)' % (mstart, mstep)
+            scan_expr = OrderedDict([(movable, pos_expression)])
         
         if duration < 0.0: init_state = [('scaler_gating_mode', 'TIME'), ('scaler_time_preset',-1.0*duration)]
         else: init_state = [('scaler_gating_mode', 'NEUT'), ('scaler_monitor_preset', duration)]
@@ -1140,6 +1147,20 @@ class InstrumentController:
         comment = 'FP'
         Fitter = self.gauss_fitter  
         self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment, Fitter, auto_drive_fit)
+        
+    @validate_motor    
+    def FindPeakT(self, motnum, mrange, mstep, duration=-1, auto_drive_fit = False, t_movable=None):
+        """the classic ICP function (fpt)
+        It can be suspended with ctrl-z (ctrl-z again to resume)
+        or the 'finishup' routine skips the rest of the points and fits now (ctrl-\)
+        Abort (ctrl-c) works the same as usual """
+        numsteps = int( abs(float(mrange) / (mstep)) + 1)
+        movable = 'a%d' % (motnum,)
+        val_now = self.getState()[movable]
+        mstart = val_now - ( int(numsteps/2) * mstep)
+        comment = 'FPT'
+        Fitter = self.gauss_fitter  
+        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment, Fitter, auto_drive_fit, t_scan=True, t_movable=t_movable)
          
     def DrivePeak(self):
         """ Drive to stored peak (self.last_fitted_peak)
