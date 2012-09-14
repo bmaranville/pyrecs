@@ -17,6 +17,6 @@ scan_qx = {'comment': 'Qx scan',
     ('qx', '-1.0e-5 + 1.0e-6*i'),
     ('q', 'sqrt(qx**2 + qz**2)'),
     ('a4', '2.0*asin(wavelength*q/(4.0*pi)) * 180.0 / pi'),
-    ('a3', 'a4/2.0 + asin(qx/q)')])}
+    ('a3', 'a4/2.0 + (asin(qx/q) * 180.0 / pi)')])}
 
 
