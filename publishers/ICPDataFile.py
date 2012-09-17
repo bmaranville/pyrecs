@@ -46,7 +46,8 @@ class ICPFindPeakPublisher(Publisher):
     def publish_datapoint(self, state, scan_def):
         outstr = ''
         for movable in scan_def['vary']:
-            outstr += '%10.4f    ' % state[movable]
+            #outstr += '%10.4f    ' % state[movable]
+            outstr += '%14g    ' % state[movable]
         outstr += '%14g\n' % state['result']['counts']
         with open(scan_def['filename'], 'a') as f:
             f.write(outstr)

@@ -28,6 +28,7 @@ from pyrecs.publishers import ICPDataFile
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
 AUTO_MOTOR_DISABLE = True
+FPT_OFFSET = 2
         
 class Publisher:
     """ generic measurement publisher.  inherit and override the classes 
@@ -76,18 +77,24 @@ class GnuplotPublisher(Publisher):
         
     def publish_datapoint(self, state, scan_def):
         outstr = ''
+        col=1
         for movable in scan_def['vary']:
-            outstr += '%10.4f    ' % state[movable]
-        outstr += '%14g\n' % state['result']['counts'] 
+            # strict ICP format:
+            #outstr += '%10.4f    ' % state[movable]
+            outstr += '%14g    ' % state[movable]
+            col += 1
+        outstr += '%14g\n' % state['result']['counts']
+        counts_col = col
         with open(self.tmp_path, 'a') as f:
             f.write(outstr)            
         title = scan_def['filename']
         if self.auto_poisson_errorbars:
-            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+            self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
         else:
-            self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+            self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
         
     def publish_end(self, state, scan_def):
+        counts_col = len(scan_def['vary']) + 1
         title = scan_def['filename']
         if state.has_key('fit_result'):
             fit_params = state['fit_result']
@@ -95,15 +102,15 @@ class GnuplotPublisher(Publisher):
             for pn in fit_params['pname']:
                 self.plot.stdin.write('%s = %f \n' % (pn, fit_params['result'][pn]))
             if self.auto_poisson_errorbars:
-                self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,counts_col,title))
             else:
-                self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,title))
             self.plot.stdin.write('f(x) w lines lt 2 lc rgb "red"\n')
         else:
             if self.auto_poisson_errorbars:
-                self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
             else:
-                self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
             
 class StdoutWriter:
     """ writes output to sys.stdout and flushes """
@@ -1035,7 +1042,7 @@ class InstrumentController:
             data.append(result['counts'])
                 
             # send immediate feedback to writers:
-            out_str  = ''.join(['%11.4f\t' % scan_state[d] for d in scan_expr])
+            out_str  = ''.join(['%15g\t' % scan_state[d] for d in scan_expr])
             out_str += '%11g\n' % (result['counts'],)
             self.write(out_str)
                 
@@ -1064,7 +1071,7 @@ class InstrumentController:
         if t_scan:
             new_filename = self.getNextFilename('fpt_%s' % movable, suffix)
             pos_expression = '%f + (i * %f)' % (mstart, mstep)
-            if t_movable == None: t_movable = 'a%d' % (int(movable[1:])-1,)
+            if t_movable == None: t_movable = 'a%d' % (int(movable[1:])-FPT_OFFSET,)
             pos_expression_t = str(movable) + ' / 2.0' 
             scan_expr = OrderedDict([(movable, pos_expression), (t_movable, pos_expression_t)]) 
         else:
