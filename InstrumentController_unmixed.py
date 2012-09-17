@@ -27,7 +27,7 @@ from pyrecs.publishers import ICPDataFile
 
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
-AUTO_MOTOR_DISABLE = False
+AUTO_MOTOR_DISABLE = True
         
 class Publisher:
     """ generic measurement publisher.  inherit and override the classes 
@@ -1146,7 +1146,7 @@ class InstrumentController:
         mstart = val_now - ( int(numsteps/2) * mstep)
         comment = 'FP'
         Fitter = self.gauss_fitter  
-        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment, Fitter, auto_drive_fit)
+        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
         
     @validate_motor    
     def FindPeakT(self, motnum, mrange, mstep, duration=-1, auto_drive_fit = False, t_movable=None):
@@ -1160,7 +1160,7 @@ class InstrumentController:
         mstart = val_now - ( int(numsteps/2) * mstep)
         comment = 'FPT'
         Fitter = self.gauss_fitter  
-        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment, Fitter, auto_drive_fit, t_scan=True, t_movable=t_movable)
+        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit, t_scan=True, t_movable=t_movable)
          
     def DrivePeak(self):
         """ Drive to stored peak (self.last_fitted_peak)
