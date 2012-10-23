@@ -5,6 +5,8 @@ import math
 import select
 from ordered_dict import OrderedDict
 
+POISSON_ERROR = False
+
 class FitGnuplot:
     def __init__(self, xdata, ydata, params_in):
         """ at minimum, need params['fit_func'] and params['pname'] """
@@ -32,11 +34,15 @@ class FitGnuplot:
         p0 = {}
         return p0       
 
-    def do_fit(self):
+    def do_fit(self, poisson_error=POISSON_ERROR):
         self.gp.stdin.write('f(x) = %s \n' % self.params_out['fit_func'])
         for pn in self.params_out['pname']:
             self.gp.stdin.write('%s = %f \n' % (pn, self.params_out['p0'][pn]))
-        fit_str = 'fit f(x) \'%s\' using 1:2:(1+sqrt($2)) via ' % self.tmp_path
+        
+        if poisson_error == True:
+            fit_str = 'fit f(x) \'%s\' using 1:2:(1+sqrt($2)) via ' % self.tmp_path
+        else:
+            fit_str = 'fit f(x) \'%s\' using 1:2 via ' % self.tmp_path
         for pn in self.params_out['pname']:
             fit_str += '%s,' % pn
         fit_str = fit_str[:-1] + '\n'

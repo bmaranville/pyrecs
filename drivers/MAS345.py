@@ -1,6 +1,6 @@
 import serial
 DEBUG = False
-port = '/dev/ttyUSB1'
+port = '/dev/ttyUSB0'
 import numpy
 
 class MAS345:

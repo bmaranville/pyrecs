@@ -27,8 +27,8 @@ from pyrecs.publishers import ICPDataFile
 
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
-AUTO_MOTOR_DISABLE = True
-FPT_OFFSET = 2
+AUTO_MOTOR_DISABLE = False
+FPT_OFFSET = 1
         
 class Publisher:
     """ generic measurement publisher.  inherit and override the classes 
@@ -96,11 +96,11 @@ class GnuplotPublisher(Publisher):
     def publish_end(self, state, scan_def):
         counts_col = len(scan_def['vary']) + 1
         title = scan_def['filename']
-        if state.has_key('fit_result'):
-            fit_params = state['fit_result']
-            self.plot.stdin.write('f(x) = %s \n' % fit_params['fit_func'])
-            for pn in fit_params['pname']:
-                self.plot.stdin.write('%s = %f \n' % (pn, fit_params['result'][pn]))
+        if state.has_key('result') and state['result'].has_key('fit_result'):
+            fit_params = state['result']['fit_result']
+            self.plot.stdin.write('f(x) = %s \n' % state['result']['fit_func'])
+            for pn in fit_params.keys():
+                self.plot.stdin.write('%s = %f \n' % (pn, fit_params[pn]))
             if self.auto_poisson_errorbars:
                 self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,counts_col,title))
             else:
@@ -111,6 +111,7 @@ class GnuplotPublisher(Publisher):
                 self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
             else:
                 self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
+
             
 class StdoutWriter:
     """ writes output to sys.stdout and flushes """
@@ -252,7 +253,7 @@ class InstrumentController:
         self._magnet = [] # magnet power supply(s)
         #self.fixed_motors = set() # none start out fixed
         self.gpib = None
-        self.loopdelay = 0.03
+        self.loopdelay = 0.5
         self.psd_data = None
         self.plot = None
         self.writers = set([StdoutWriter()]) # handles screen output (and logging?)
