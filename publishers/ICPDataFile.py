@@ -1,35 +1,14 @@
 from __future__ import with_statement
 import struct, glob, time, os
 from pyrecs.icp_compat import ibuffer
-#from InstrumentController import Publisher
 from FileManifest import FileManifest
+from publisher import Publisher
 from copy import copy, deepcopy
 import math
 import time
-
-class Publisher:
-    """ generic measurement publisher.  inherit and override the classes 
-    for specific publishers (file, Xpeek, manifest, etc.) """
-    def __init__(self, *args, **kwargs):
-        pass
-       
-    def publish_start(self, *args, **kwargs):
-        """ called to record the start time of the measurement """
-        pass
-    
-    def publish_archive_creation(self, *args, **kwargs):
-        """ called to record the creation of the data archive
-        (needed in the MONITOR.REC file) """
-        pass
-    
-    def publish_datapoint(self, *args, **kwargs):
-        """ called to record a new datapoint """
-        pass
-    
-    def publish_end(self, *args, **kwargs):
-        """ called when measurement complete - archive finished """
-        pass
+import pprint
  
+PUBLISH_FITRESULT = True
 
 class ICPFindPeakPublisher(Publisher):
     fileManifest = FileManifest()
@@ -53,6 +32,11 @@ class ICPFindPeakPublisher(Publisher):
             f.write(outstr)
             
     def publish_end(self, state, scan_def):
+        if (PUBLISH_FITRESULT == True) and state['result'].has_key('fit_result'):
+            outstrs = pprint.pformat(state['result']['fit_result']).split('\n')
+            with open(scan_def['filename'], 'a') as f:
+                for outstr in outstrs:
+                    f.write('# ' + outstr)    
         self.fileManifest.publish_filecreation(state, scan_def)
         self.fileManifest.publish_end(state, scan_def)
 
