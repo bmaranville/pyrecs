@@ -82,14 +82,16 @@ class FitGaussGnuplot(FitGnuplot):
         p0['y_offset'] = min(ydata)
         p0['amplitude'] = max(ydata) - min(ydata)
         weighted_x = 0.
+        sum_relative_y = 0.
         for x,y in zip(xdata,ydata):
             weighted_x += x * (y - p0['y_offset'])
-        x0 = weighted_x/sum(ydata)
+            sum_relative_y += (y - p0['y_offset'])
+        x0 = weighted_x/sum_relative_y
         moment_sum = 0.
         for x,y in zip(xdata,ydata):
             moment_sum += (x0 - x)**2 * (y - p0['y_offset'])
-        sigma = math.sqrt(abs(moment_sum/sum(ydata)))
-        FWHM = 2.0*math.sqrt(2.0 * log(2.0)) * sigma
+        sigma = math.sqrt(abs(moment_sum/sum_relative_y))
+        FWHM = 2.0*math.sqrt(2.0 * math.log(2.0)) * sigma
         p0['center'] = x0
         p0['FWHM'] = FWHM
         return p0
