@@ -88,7 +88,8 @@ class FitGaussGnuplot(FitGnuplot):
         moment_sum = 0.
         for x,y in zip(xdata,ydata):
             moment_sum += (x0 - x)**2 * (y - p0['y_offset'])
-        FWHM = math.sqrt(abs(moment_sum/sum(ydata)))
+        sigma = math.sqrt(abs(moment_sum/sum(ydata)))
+        FWHM = 2.0*math.sqrt(2.0 * log(2.0)) * sigma
         p0['center'] = x0
         p0['FWHM'] = FWHM
         return p0
