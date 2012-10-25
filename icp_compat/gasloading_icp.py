@@ -46,7 +46,7 @@ class GasLoadingOverlord(Overlord):
         return
 
 if __name__ == '__main__':
-    overlord = GasLoadingOverlord("% ")
+    overlord = GasLoadingOverlord()
     icp = overlord.do_icp_cmd
     rpsf = overlord.run_py_seq_file
     overlord.start()
