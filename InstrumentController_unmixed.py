@@ -12,17 +12,19 @@ from FitGnuplot import *
 from StringIO import StringIO
 import math
 from copy import deepcopy, copy
+import simplejson
 
 import itertools
 import functools
-from ordered_dict import OrderedDict
+#from ordered_dict import OrderedDict
+from collections import OrderedDict
 from prefilter_ICP import prefilterICPString
 from ICPSequenceFile import PyICPSequenceFile, PyICPSequenceStringIO
 from pyrecs.icp_compat import ibuffer
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
 from pyrecs.publishers import update_xpeek
-from pyrecs.publishers import ICPDataFile
+from pyrecs.publishers import ICPDataFile, publisher
 
 
 FLOAT_ERROR = 1.0e-7
@@ -78,7 +80,7 @@ class GnuplotPublisher(Publisher):
     def publish_datapoint(self, state, scan_def):
         outstr = ''
         col=1
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             # strict ICP format:
             #outstr += '%10.4f    ' % state[movable]
             outstr += '%14g    ' % state[movable]
@@ -253,7 +255,7 @@ class InstrumentController:
         self._magnet = [] # magnet power supply(s)
         #self.fixed_motors = set() # none start out fixed
         self.gpib = None
-        self.loopdelay = 0.5
+        self.loopdelay = 0.1
         self.psd_data = None
         self.plot = None
         self.writers = set([StdoutWriter()]) # handles screen output (and logging?)
@@ -995,14 +997,14 @@ class InstrumentController:
         #self._aborted = False
         # these are defined as tuple trees in order to pass easily over xmlrpc, 
         # but internally they are treated as dicts
-        scan_definition['vary'] = OrderedDict(scan_definition['vary'])
-        scan_definition['init_state'] = OrderedDict(scan_definition['init_state'])
+        #scan_definition['vary'] = OrderedDict(scan_definition['vary'])
+        #scan_definition['init_state'] = OrderedDict(scan_definition['init_state'])
         scan_definition.setdefault('namestr', self.ip.GetNameStr().upper())
-        new_state = self.updateState(scan_definition['init_state'])
+        new_state = self.updateState(OrderedDict(scan_definition['init_state']))
         for pub in publishers:
             pub.publish_start(new_state, scan_definition)
         iterations = scan_definition['iterations']
-        scan_expr = scan_definition['vary']
+        scan_expr = OrderedDict(scan_definition['vary'])
         context = {}
         context.update(math.__dict__)
         context.update(deepcopy(new_state)) # default dictionaries to give context to calculations
@@ -1061,11 +1063,16 @@ class InstrumentController:
     
     def RunScan(self, scan_definition):
         """runs a scan_definition with default publishers and FindPeak publisher """
-        publishers = self.default_publishers + [ICPDataFile.ICPFindPeakPublisher()]
+        publishers = self.default_publishers + [publisher.RunScanPublisher()]
         scan = self.oneDimScan(scan_definition, publishers = publishers)
         self.ResetAbort()
         for datapoint in scan:
             pass # everything gets done in the iterator
+    
+    def RunScanFile(self, json_filename):
+        """ opens and runs a scan from a definition in a json file """
+        scan_definition = simplejson.loads(open(json_filename,'r').read())
+        self.RunScan(scan_definition)
     
     def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False):
         suffix = '.' + self.ip.GetNameStr().lower()
@@ -1074,12 +1081,12 @@ class InstrumentController:
             pos_expression = '%f + (i * %f)' % (mstart, mstep)
             if t_movable == None: t_movable = 'a%d' % (int(movable[1:])-FPT_OFFSET,)
             pos_expression_t = str(movable) + ' / 2.0' 
-            scan_expr = OrderedDict([(movable, pos_expression), (t_movable, pos_expression_t)]) 
+            scan_expr = [(movable, pos_expression), (t_movable, pos_expression_t)]
         else:
             new_filename = self.getNextFilename('fp_%s' % movable, suffix)
             # put this in terms the scanner understands:
             pos_expression = '%f + (i * %f)' % (mstart, mstep)
-            scan_expr = OrderedDict([(movable, pos_expression)])
+            scan_expr = [(movable, pos_expression)]
         
         if duration < 0.0: init_state = [('scaler_gating_mode', 'TIME'), ('scaler_time_preset',-1.0*duration)]
         else: init_state = [('scaler_gating_mode', 'NEUT'), ('scaler_monitor_preset', duration)]
@@ -1117,7 +1124,10 @@ class InstrumentController:
                 fit_str += '%s: %11f  +/-  %.1f\n' % (pn, fit_result[pn], fit_result['%s_err' % pn])
             self.write(fit_str)
             end_state = self.getState()
-            end_state['result'] = { 'TYPE': comment, 'fit_result': fit_result, 'fit_func': fit_params['fit_func']}
+            end_state['result'] = { 'TYPE': comment, \
+                                    'fit_str': fit_str,\
+                                    'fit_result': fit_result,\
+                                    'fit_func': fit_params['fit_func']}
             for pub in publishers:
                 pub.publish_end(end_state, scan_definition)
             

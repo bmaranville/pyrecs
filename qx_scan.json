@@ -1,0 +1,12 @@
+{"comment": "Qx scan with slit instead of pinhole",
+ "filename": "qx_20micron_longscan.txt",
+ "init_state": [["scaler_gating_mode", "TIME"], ["scaler_time_preset", 2.0], ["wavelength", 6550.0]],
+ "iterations": 1001,
+ "namestr": "CG1",
+ "vary": [ 
+    ["qx", "-3.2e-4 + 6.4e-7*i"],
+    ["qz", "0.0016"],
+    ["q", "sqrt(qx**2 + qz**2)"],
+    ["a4", "2.0*asin(wavelength*q/(4.0*pi)) * 180.0 / pi"],
+    ["sample_angle", "a4/2.0 + (asin(qx/q) * 180.0 / pi)"],
+    ["a3", "a4 - sample_angle"] ]}

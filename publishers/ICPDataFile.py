@@ -7,6 +7,7 @@ from copy import copy, deepcopy
 import math
 import time
 import pprint
+from collections import OrderedDict
  
 PUBLISH_FITRESULT = True
 
@@ -16,7 +17,7 @@ class ICPFindPeakPublisher(Publisher):
         state.setdefault('monitor', 0.0) # typically don't measure monitor before findpeak
         self.fileManifest.publish_start(state, scan_def)
         header = ''
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             header += ' Motor no. % 2s ' % movable
         header += '   Intensity   ' + time.strftime('%b %d %Y %H:%M') + '\n'
         with open(scan_def['filename'], 'w') as f:
@@ -24,7 +25,7 @@ class ICPFindPeakPublisher(Publisher):
             
     def publish_datapoint(self, state, scan_def):
         outstr = ''
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             #outstr += '%10.4f    ' % state[movable]
             outstr += '%14g    ' % state[movable]
         outstr += '%14g\n' % state['result']['counts']
@@ -32,11 +33,12 @@ class ICPFindPeakPublisher(Publisher):
             f.write(outstr)
             
     def publish_end(self, state, scan_def):
-        if (PUBLISH_FITRESULT == True) and state['result'].has_key('fit_result'):
-            outstrs = pprint.pformat(state['result']['fit_result']).split('\n')
+        if (PUBLISH_FITRESULT == True) and state['result'].has_key('fit_str'):
+            #outstrs = pprint.pformat(state['result']['fit_result'], indent=4).split('\n')
+            outstrs = state['result']['fit_str'].split('\n')
             with open(scan_def['filename'], 'a') as f:
                 for outstr in outstrs:
-                    f.write('# ' + outstr)    
+                    f.write('# ' + outstr + '\n')    
         self.fileManifest.publish_filecreation(state, scan_def)
         self.fileManifest.publish_end(state, scan_def)
 
@@ -362,7 +364,7 @@ class ICPDataFile:
     def GenerateHeader(self, state = {}, scan_def = {}):
         params = deepcopy(state)
         params.update(scan_def['init_state'])
-        scan_expr = scan_def['vary']
+        scan_expr = OrderedDict(scan_def['vary'])
         scan_state0 = {'i': 0}
         context = deepcopy(params)
         context.update(math.__dict__) # load up the standard context
@@ -478,7 +480,7 @@ class ICPDataFile:
     def AddPoint(self, params, scan_def):
         result = params['result']
         outstr = ''
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             outstr += '%11.5f ' % params[movable]
         t_seconds = result['count_time'] / 10000.0
         t_minutes = t_seconds / 60.0
@@ -534,7 +536,7 @@ class ICPDataFile:
     def AddPointTimestamped(self, params, scan_def, timestamp=None):
         result = params['result']
         outstr = ''
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             outstr += '%11.5f ' % params[movable]
         t_seconds = result['count_time'] / 10000.0
         t_minutes = t_seconds / 60.0

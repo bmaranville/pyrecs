@@ -3,6 +3,7 @@ import struct, glob, time, os
 from FileManifest import FileManifest
 import time
 import pprint
+from collections import OrderedDict
 
 class Publisher:
     """ generic measurement publisher.  inherit and override the classes 
@@ -30,14 +31,14 @@ class Publisher:
 class RunScanPublisher(Publisher):
     fileManifest = FileManifest()
     def publish_start(self, state, scan_def):
-        params.setdefault('monitor', 0.0) # typically don't measure monitor before findpeak
+        state.setdefault('monitor', 0.0) # typically don't measure monitor before findpeak
         self.fileManifest.publish_start(state, scan_def)
         header = '# Scan definition: \n'
-        scan_def_lines = pprint.pformat(scan_def).split('\n')
+        scan_def_lines = pprint.pformat(scan_def, indent=4).split('\n')
         for line in scan_def_lines:
             header += '# ' + line + '\n'
         header += '#\n# Column names: \n' # spacer    
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             header += ' Motor no. % 2s ' % movable
         header += '   Intensity   ' + time.strftime('%b %d %Y %H:%M') + '\n'
         with open(scan_def['filename'], 'w') as f:
@@ -45,7 +46,7 @@ class RunScanPublisher(Publisher):
             
     def publish_datapoint(self, state, scan_def):
         outstr = ''
-        for movable in scan_def['vary']:
+        for movable in OrderedDict(scan_def['vary']):
             #outstr += '%10.4f    ' % state[movable]
             outstr += '%14g    ' % state[movable]
         outstr += '%14g\n' % state['result']['counts']
