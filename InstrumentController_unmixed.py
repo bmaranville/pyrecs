@@ -465,8 +465,8 @@ class InstrumentController:
                 updater(devices_to_move, positions)
             devices_moved.update(devices_to_move)
         for device in devices_moved:
-            new_state.pop(device)
-        self.state.update(new_state)
+            new_state.pop(device) # remove the moved devices from the new information to be added to state
+        self.state.update(new_state) # add all the non-movable updates to state (count type, etc.)
         return deepcopy(self.state)
         
     def setLogging(self, enable):
@@ -676,6 +676,10 @@ class InstrumentController:
             while self.mc.CheckMoving(motnum) == True: # make sure we're stopped before disabling
                 time.sleep(self.loopdelay)
             if disable: self.mc.DisableMotor(motnum)
+            new_hardpos = self.mc.GetMotorPos(motnum)
+            new_softpos = new_hardpos - self.ip.GetSoftMotorOffset(motnum)
+            self.ip.SetHardMotorPos(motnum, new_hardpos) # update MOTORS.BUF
+            self.state[self.motor_names[motnum-1]] = new_softpos # update state dictionary
             # and it doesn't exit until all sub-calls have returned (all motors are stopped and disabled)
             return
             

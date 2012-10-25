@@ -39,7 +39,7 @@ class RunScanPublisher(Publisher):
             header += '# ' + line + '\n'
         header += '#\n# Column names: \n' # spacer    
         for movable in OrderedDict(scan_def['vary']):
-            header += ' Motor no. % 2s ' % movable
+            header += '# Motor no. % 2s ' % movable
         header += '   Intensity   ' + time.strftime('%b %d %Y %H:%M') + '\n'
         with open(scan_def['filename'], 'w') as f:
             f.write(header)
