@@ -63,6 +63,9 @@ class PhotometerControlMixin:
         
         values = []
         for i in range(duration):
+            if self._aborted:
+                print "\nAborting"
+                break
             value, units = photometer.readValue()
             values.append(value)
             start_time = time.time()
@@ -74,7 +77,7 @@ class PhotometerControlMixin:
                     #    self._aborted = False
                     break
                 time.sleep(self.loopdelay)
-            
+        
         count_time = duration
         monitor = duration
         elapsed_time = duration
