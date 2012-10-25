@@ -1,5 +1,5 @@
 {"comment": "Qx scan with slit instead of pinhole",
- "filename": "qx_20micron_longscan.txt",
+ "filename": "qx_20micron_longscan",
  "init_state": [["scaler_gating_mode", "TIME"], ["scaler_time_preset", 2.0], ["wavelength", 6550.0]],
  "iterations": 1001,
  "namestr": "CG1",
