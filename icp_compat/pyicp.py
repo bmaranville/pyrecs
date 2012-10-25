@@ -411,7 +411,7 @@ class PyICPSequenceFile:
 
 
 if __name__ == '__main__':
-    overlord = GasLoadingOverlord("% ")
+    overlord = Overlord("% ")
     icp = overlord.do_icp_cmd
     rpsf = overlord.run_py_seq_file
     overlord.start()
