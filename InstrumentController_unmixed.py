@@ -29,7 +29,7 @@ from pyrecs.publishers import ICPDataFile, publisher
 
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
-AUTO_MOTOR_DISABLE = False
+AUTO_MOTOR_DISABLE = True
 FPT_OFFSET = 1
         
 class Publisher:
