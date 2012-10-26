@@ -29,7 +29,7 @@ from pyrecs.publishers import ICPDataFile, publisher
 
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
-AUTO_MOTOR_DISABLE = False
+AUTO_MOTOR_DISABLE = True
 FPT_OFFSET = 1
         
 class Publisher:
@@ -1065,10 +1065,18 @@ class InstrumentController:
         return
     
     
-    def RunScan(self, scan_definition):
+    def RunScan(self, scan_definition, auto_increment_file=True):
         """runs a scan_definition with default publishers and FindPeak publisher """
         publishers = self.default_publishers + [publisher.RunScanPublisher()]
-        scan = self.oneDimScan(scan_definition, publishers = publishers)
+        new_scan_def = deepcopy(scan_definition)
+        
+        if auto_increment_file=True:
+            prefix, suffix = os.path.splitext(scan_definition['filename'])
+            if suffix == '': suffix = '.' + self.ip.GetNameStr().lower()
+            new_filename = self.getNextFilename(prefix, suffix)
+            new_scan_def['filename'] = new_filename
+        
+        scan = self.oneDimScan(new_scan_def, publishers = publishers)
         self.ResetAbort()
         for datapoint in scan:
             pass # everything gets done in the iterator
