@@ -812,6 +812,115 @@ class InstrumentController:
         return data
     
     @validate_motor
+    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
+        """ new, non-ICP function: count while moving.
+                returns: (position, counts, elapsed_time)
+        
+        This is a better implementation will take advantage of using VIPER's internal clock.
+        VIPER command: 'join [list [clock microseconds] [motor position 1] [clock microseconds] [scaler read] [clock microseconds]] ";"'
+        will give a better accuracy on motor position (~ 300 microseconds between clock reads in testing)
+        
+        Alternatively could just do a bracketed read and average motor position:
+        'join [list [clock microseconds] [motor position 1] [scaler read] [motor position 1] [clock microseconds]] ";"'
+        
+        which might take 1 ms total, plus many milliseconds for transmission.
+        """ 
+        (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        title = 'ic.RapidScan(%d, %.4f, %.4f)' % (motornum, start_angle, stop_angle)
+        
+        # edges of bins: where we measure
+        position_list = []
+        time_list = []
+        cum_counts_list = []
+        
+        # derived quantities per bin:
+        counts_list = []
+        bin_position_list = []
+        bin_time_list = []
+        cps_list = []
+        
+        self.DriveMotor(motornum, start_angle)
+        self.scaler.ResetScaler()
+        self.scaler.CountByTime(-1)
+        self.mc.EnableMotor(motornum)
+        start_time = time.time()
+        
+        motor_offset = self.ip.GetSoftMotorOffset(motornum)        
+        hard_stop = stop_angle + motor_offset
+        tstr, ctstr, motstr, ackstr = self.mc.sendCMD('join [list [counts microseconds] [scaler read] [motor position %d] [motor position %d %.6f]] ";"' % (motornum,motornum,hard_stop)).split(";")
+        start_time = int(tstr)
+        old_time = start_time
+        time_list.append(start_time)
+        cum_count = float(ctstr.split()[2])
+        cum_counts_list.append(cum_count)
+        pos = float(motstr) 
+        soft_pos = pos - motor_offset
+        position_list.append(soft_pos)
+        #self.mc.MoveMotor(motornum, hard_stop)
+        
+        #while self.mc.CheckMoving(motornum):
+        #soft_pos = start_angle
+        tol = self.ip.GetMotorTolerance(motornum)
+        readout_cmd = 'join [list [clock microseconds] [motor position %d] [scaler read] [motor position %d] [clock microseconds]] ";"' % (motornum, motornum)
+        while 1:
+            if self._aborted:
+                self.write("aborted")
+                #if not reraise_exceptions:
+                #    self._aborted = False
+                break
+                
+            t_bef, mot_bef, ctstr, mot_aft, t_aft = self.mc.sendCMD(readout_cmd).split(";")
+            new_cum_count = float(ctstr.split()[2])
+            cum_counts_list.append(new_cum_count)
+            new_time = (int(t_bef) + int(t_aft))/2.0 - start_time # microseconds
+            new_hard_pos = (float(mot_bef) + float(mot_aft))/2.0
+            
+            self.ip.SetHardMotorPos(motornum, float(mot_aft)) # update MOTORS.BUF
+            new_soft_pos = new_hard_pos - motor_offset
+            position_list.append(new_soft_pos)
+            
+            new_count = new_cum_count - cum_count
+            counts_list.append(new_count)
+
+            time_list.append(new_time)
+            new_delta_time = new_time - old_time
+            new_cps = new_count/new_delta_time * 1.0e6 # convert microseconds to seconds
+            cps_list.append(new_cps)
+            
+            new_bin_position = (new_soft_pos + soft_pos)/2.0
+            bin_position_list.append(new_bin_position)
+            new_bin_time = (new_time + old_time)/2.0
+            bin_time_list.append(new_bin_time)
+            
+            self.write(str(new_bin_position) + '\t'+ str(new_cps))
+            out_str = '%.4f\t%.4f' % (new_bin_position, new_cps)
+            tmp_file = open(tmp_path, 'a')
+            tmp_file.write(out_str + '\n')
+            tmp_file.close()
+            self.updateGnuplot(tmp_path, title)
+            
+            if abs(new_soft_pos - soft_pos) <= tol:
+                break
+            soft_pos = new_soft_pos
+            old_time = new_time
+            cum_count = new_cum_count
+            
+            time.sleep(0.2)
+        
+        self.scaler.AbortCount()
+        count_time, monitor, counts = self.scaler.GetCounts()
+        self.scaler.GetElapsed()
+        self.write('count time: %.3f' % count_time)
+        self.mc.StopMotor(motornum)
+        while self.mc.CheckMoving(motornum) == True: # make sure we're stopped before disabling
+            time.sleep(self.loopdelay)
+        if disable: self.mc.DisableMotor(motornum)
+        new_pos =  self.mc.GetMotorPos(motornum)
+        self.ip.SetHardMotorPos(motornum, new_pos) # update MOTORS.BUF
+       
+        return bin_position_list, cps_list, bin_time_list
+        
+    @validate_motor
     def RapidScan(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
         """ new, non-ICP function: count while moving.
                 returns: (position, counts, elapsed_time) """
