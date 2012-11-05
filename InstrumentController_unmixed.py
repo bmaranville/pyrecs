@@ -1070,7 +1070,7 @@ class InstrumentController:
         publishers = self.default_publishers + [publisher.RunScanPublisher()]
         new_scan_def = deepcopy(scan_definition)
         
-        if auto_increment_file=True:
+        if auto_increment_file==True:
             prefix, suffix = os.path.splitext(scan_definition['filename'])
             if suffix == '': suffix = '.' + self.ip.GetNameStr().lower()
             new_filename = self.getNextFilename(prefix, suffix)
