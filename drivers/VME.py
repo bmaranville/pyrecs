@@ -65,6 +65,20 @@ class VME:
         else: 
             return False
             
+    def GetMotorLabel(self, motornum):
+        self.sendCMD('set $mc(%d,label)' % (motornum,))
+        
+    def GetAllMotorLabels(self):
+        reply = self.sendCMD('set return_values {};foreach axis $mc(defined) {lappend return_values "${axis}:$mc(${axis},label)"};join $return_values ";"')
+        l = []
+        for i in reply.split(";"):
+            l.append(i.split(":"))
+        return l      
+        
+    def GetAllMotorPositions(self):
+        reply = self.sendCMD('set return_values {};foreach axis $mc(defined) {lappend return_values [motor position ${axis}]};join $return_values ";"')
+        return map(float, reply.split(";"))
+            
     #################### DETECTOR FUNCTIONS #########################
     def CountByTime(self, duration):
         self.sendCMD('scaler time %d' % duration)
