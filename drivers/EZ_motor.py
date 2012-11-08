@@ -101,7 +101,7 @@ class EZStepper:
         self.sendCMD('/%sT' % self.MOTOR_STRINGS[motornum])
         
     def CheckHardwareLimits(self, motornum):
-        pass
+        return True
             
     def CheckMoving(self, motornum):
         step_now = long(self.sendCMD('/%s?A' % self.MOTOR_STRINGS[motornum]))
