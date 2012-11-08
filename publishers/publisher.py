@@ -3,7 +3,8 @@ import struct, glob, time, os
 from FileManifest import FileManifest
 import time
 import pprint
-from collections import OrderedDict
+from pyrecs.ordered_dict import OrderedDict
+#from collections import OrderedDict
 
 class Publisher:
     """ generic measurement publisher.  inherit and override the classes 

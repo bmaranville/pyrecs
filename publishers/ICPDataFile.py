@@ -7,7 +7,8 @@ from copy import copy, deepcopy
 import math
 import time
 import pprint
-from collections import OrderedDict
+from pyrecs.ordered_dict import OrderedDict
+#from collections import OrderedDict
  
 PUBLISH_FITRESULT = True
 
