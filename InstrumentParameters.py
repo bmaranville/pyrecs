@@ -12,7 +12,7 @@ MOTPOS_BUF = os.path.join(home_dir, 'icp/cfg/MOTPOS.BUF')
 MOTORS_BUF = os.path.join(home_dir, 'icp/cfg/MOTORS.BUF')
 INSTR_CFG = os.path.join(home_dir, 'icp/cfg/INSTR.CFG')
 DEBUG = False
-RS232_CFG = os.path.join(home_dir, 'icp/ cfg/rs232.conf')
+RS232_CFG = os.path.join(home_dir, 'icp/cfg/rs232.conf')
 
 class InstrumentParameters:
     """ class to handle values stored in ICP config files.  Convert to XML at your leisure"""
