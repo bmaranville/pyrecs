@@ -65,12 +65,12 @@ class InstrumentParameters:
         self.InstrCfg['types'] = {}
         for key, datum in zip(pols, data[5:]):
             self.InstrCfg['types'][key] = datum
-        if self.InstrCfg['sta#'] == '-1':
-            # and again... there are two lines formatted like this
-            data = f.readline().split() # split on whitespace
-            keys = f.readline()[:-1].split(',') # keys are comma-separated
-            for key, datum in zip(keys, data):
-                self.InstrCfg[key] = datum
+#        if self.InstrCfg['sta#'] == '-1':
+#            # and again... there are two lines formatted like this
+#            data = f.readline().split() # split on whitespace
+#            keys = f.readline()[:-1].split(',') # keys are comma-separated
+#            for key, datum in zip(keys, data):
+#                self.InstrCfg[key] = datum
         # and again... another like the first two but with tabs
         data = f.readline().split() # split on whitespace
         keys = f.readline()[:-1].split('\t') # keys are tab-separated
@@ -82,7 +82,7 @@ class InstrumentParameters:
         motors = {}
         for i in range(int(self.InstrCfg['#mots'])):
             data = f.readline().split()
-            motordict = {}
+            motordict = OrderedDict()
             for key, datum in zip(motorkeys, data):
                 motordict[key] = int(datum)
             motors[i+1] = motordict

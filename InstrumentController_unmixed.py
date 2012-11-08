@@ -231,15 +231,16 @@ class InstrumentController:
         self.ip = InstrumentParameters() # handles all configuration files
         
         self.num_motors = int(self.ip.num_motors)
-        self.motor_names = ['a%d' % i for i in range(1, self.num_motors+1)]
-        self.motor_lookup = dict(zip(self.motor_names, range(1, self.num_motors+1)))
+        self.motor_numbers = self.ip.InstrCfg['motors'].keys()
+        self.motor_names = ['a%d' % i for i in self.motor_numbers]
+        self.motor_lookup = dict(zip(self.motor_names, self.motor_numbers))
         
         num_pol_ps = int(self.ip.InstrCfg['#pol_ps'])
         self.ps_names = ['ps%d' %i for i in range(1, num_pol_ps+1)]
         self.ps_lookup = dict(zip(self.ps_names, range(1, num_pol_ps+1)))
         
-        PC_mot_line = int(self.ip.InstrCfg['PC_mot_line'])
-        vme = VME(port = self.ip.GetSerialPort(PC_mot_line)) # initialize the VME box (motors, scaler)
+        VIPER_mot_line = int(self.ip.InstrCfg['VIPER_mot_line'])
+        vme = VME(port = self.ip.GetSerialPort(VIPER_mot_line)) # initialize the VME box (motors, scaler)
         
         self.scaler = vme # counter controller
         self.mc = vme # motor controller, happens to be same as counter controller right now
@@ -360,8 +361,9 @@ class InstrumentController:
         def wrapper(*args, **kwds):
             motornum = args[1] if len(args) > 1 else None
             me = args[0]
-            num_motors = me.num_motors # self!!
-            if (motornum is not None) and ((motornum <= 0) or (motornum > num_motors)):
+            #num_motors = me.num_motors # self!!
+            motor_numbers = me.motor_numbers
+            if (motornum is not None) and (motornum not in motor_numbers):
                 me.write('requested motor is out of range')
                 return
             else:
@@ -1017,7 +1019,7 @@ class InstrumentController:
     def PrintAllMotorPos(self, use_stored = False):
         soft_line = ' Soft: '
         hard_line = ' Hard: '
-        for i in range(1,self.num_motors+1):
+        for i in self.motor_numbers:
             if self._aborted: break
             if use_stored:
                 hard_pos = self.ip.GetHardMotorPos(i)
@@ -1056,14 +1058,14 @@ class InstrumentController:
         
     def PrintLowerLimits(self):
         result = self.ip.GetLowerLimits()
-        for i in range(self.num_motors):
-            self.write('L%d: %.4f\t' % (i+1, result[i]))
+        for i in self.motor_numbers:
+            self.write('L%d: %.4f\t' % (i, result[i]))
     
     
     def PrintUpperLimits(self):
         result = self.ip.GetUpperLimits()
-        for i in range(self.num_motors):
-            self.write('U%d: %.4f\t' % (i+1, result[i]))
+        for i in self.motor_numbers:
+            self.write('U%d: %.4f\t' % (i, result[i]))
         
     @validate_motor
     def SetLowerLimit(self, motornum, position):
