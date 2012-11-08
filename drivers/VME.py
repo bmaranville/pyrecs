@@ -69,11 +69,12 @@ class VME:
         self.sendCMD('set $mc(%d,label)' % (motornum,))
         
     def GetAllMotorLabels(self):
-        reply = self.sendCMD('set return_values {};foreach axis $mc(defined) {lappend return_values "${axis}:$mc(${axis},label)"};join $return_values ";"')
-        l = []
+        reply = self.sendCMD('set return_values {};foreach axis $mc(defined) {lappend return_values ${axis}:$mc(${axis},label)};join $return_values ";"')
+        label_dict = {}
         for i in reply.split(";"):
-            l.append(i.split(":"))
-        return l      
+            motnum, label = i.split(":")
+            label_dict[int(motnum)] = label
+        return label_dict
         
     def GetAllMotorPositions(self):
         reply = self.sendCMD('set return_values {};foreach axis $mc(defined) {lappend return_values [motor position ${axis}]};join $return_values ";"')
