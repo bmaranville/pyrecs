@@ -80,7 +80,7 @@ class InstrumentParameters:
             
         # now loading up motor params
         motorkeys = f.readline().split()
-        motors = {}
+        motors = OrderedDict()
         for i in range(int(self.InstrCfg['#mots'])):
             data = f.readline().split()
             motordict = OrderedDict()

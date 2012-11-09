@@ -1,6 +1,7 @@
 from __future__ import with_statement
 import time, sys, glob, copy, os
 sys.path.append(os.path.join(os.environ['HOME'],'bin'))
+sys.path.append(os.path.join(os.environ['HOME'],'bbm','python'))
 #import numpy # not really using for much except float32 and int32
 import signal # need this to make sure interrupts only go to main thread!
 import tempfile
@@ -231,7 +232,7 @@ class InstrumentController:
         self.ip = InstrumentParameters() # handles all configuration files
         
         self.num_motors = int(self.ip.num_motors)
-        self.motor_numbers = self.ip.InstrCfg['motors'].keys()
+        self.motor_numbers = [m['M'] for m in self.ip.InstrCfg['motors'].values()]
         self.motor_names = ['a%d' % i for i in self.motor_numbers]
         self.motor_lookup = dict(zip(self.motor_names, self.motor_numbers))
         
@@ -1019,17 +1020,18 @@ class InstrumentController:
     def PrintAllMotorPos(self, use_stored = False):
         soft_line = ' Soft: '
         hard_line = ' Hard: '
-        for i in self.motor_numbers:
+        for i,m in enumerate(self.motor_numbers):
+            ii = i+1
             if self._aborted: break
             if use_stored:
-                hard_pos = self.ip.GetHardMotorPos(i)
+                hard_pos = self.ip.GetHardMotorPos(m)
             else:
-                hard_pos = self.GetHardMotorPos(i)
-                self.ip.SetHardMotorPos(i, hard_pos) # update, because we can!
-            offset = self.ip.GetSoftMotorOffset(i)
+                hard_pos = self.GetHardMotorPos(m)
+                #self.ip.SetHardMotorPos(i, hard_pos) # update, because we can!
+            offset = self.ip.GetSoftMotorOffset(m)
             soft_pos = hard_pos - offset
-            soft_line += 'A%02d=%8.3f ' % (i, soft_pos)
-            hard_line += 'A%02d=%8.3f ' % (i, hard_pos)
+            soft_line += 'A%02d=%8.3f ' % (m, soft_pos)
+            hard_line += 'A%02d=%8.3f ' % (m, hard_pos)
             #self.write(' Soft: A%02d=%7.3f\n Hard: A%02d=%7.3f' % (motornum, soft_pos, motornum, hard_pos))
             #self.write('A%02d: %.4f\t' % (i, pos))
             if ( i % 5 == 0) or (i == self.num_motors):
