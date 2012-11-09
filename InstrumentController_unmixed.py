@@ -1027,14 +1027,14 @@ class InstrumentController:
                 hard_pos = self.ip.GetHardMotorPos(m)
             else:
                 hard_pos = self.GetHardMotorPos(m)
-                #self.ip.SetHardMotorPos(i, hard_pos) # update, because we can!
+                self.ip.SetHardMotorPos(m, hard_pos) # update, because we can!
             offset = self.ip.GetSoftMotorOffset(m)
             soft_pos = hard_pos - offset
             soft_line += 'A%02d=%8.3f ' % (m, soft_pos)
             hard_line += 'A%02d=%8.3f ' % (m, hard_pos)
             #self.write(' Soft: A%02d=%7.3f\n Hard: A%02d=%7.3f' % (motornum, soft_pos, motornum, hard_pos))
             #self.write('A%02d: %.4f\t' % (i, pos))
-            if ( i % 5 == 0) or (i == self.num_motors):
+            if ( ii % 5 == 0) or (ii == self.num_motors):
                 self.write(soft_line + '\n')
                 self.write(hard_line + '\n')
                 soft_line = ' Soft: '
