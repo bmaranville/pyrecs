@@ -1,7 +1,6 @@
 import serial, struct
 import time
-DEBUG = True
-
+DEBUG = False
 
 class EZStepper:
     """Talk to the EZStepper box"""

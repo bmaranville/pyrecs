@@ -49,7 +49,6 @@ class MonoBladeMixin:
             pos = self.mbc.GetMotorPos(bladenum)
             self.write('B%02d=%8.3f\n' % (bladenum, pos))
         else:  # no motor specified - get them all
-            pos_list = [self.mbc.GetMotorPos(b) for b in self.blade_numbers]
             out_line = ''
             for i, b in enumerate(self.blade_numbers):
                 pos = self.mbc.GetMotorPos(b)
@@ -62,6 +61,8 @@ class MonoBladeMixin:
 mixin_class = MonoBladeMixin
 # to use:
 """ 
+from pyrecs.InstrumentController_unmixed import *
+ic = InstrumentController()
 from pyrecs.mixins import monochromator_blades_mixin
 InstrumentController.__bases__ = (monochromator_blades_mixin.MonoBladeMixin,)
 monochromator_blades_mixin.MonoBladeMixin.__init__(ic)
