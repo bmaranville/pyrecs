@@ -33,6 +33,7 @@ class MonoBladeMixin:
         self.dm = self.mbc.MoveMotor
         self.setm = self.mbc.SetMotorPos
         self.pm = self.PrintMonoBladeAngle
+        self.fpm = self.FindPeakMonoBlade
         
         # hook into the IC device registry:
         self.device_registry.update( {'monoblades':
@@ -56,6 +57,19 @@ class MonoBladeMixin:
                 if ( (i+1) % 5 == 0) or ((i+1) == len(self.blade_numbers)):
                     self.write(out_line + '\n')
                     out_line = ''
+        
+    def FindPeakMonoBlade(self, bladenum, mrange, mstep, duration=-1, auto_drive_fit = False):
+        """the classic ICP function (fp), specific to monochromator blades
+        It can be suspended with ctrl-z (ctrl-z again to resume)
+        or the 'finishup' routine skips the rest of the points and fits now (ctrl-\)
+        Abort (ctrl-c) works the same as usual """
+        numsteps = int( abs(float(mrange) / (mstep)) + 1)
+        movable = 'b%d' % (bladenum,)
+        val_now = self.getState()[movable]
+        mstart = val_now - ( int(numsteps/2) * mstep)
+        comment = 'FP'
+        Fitter = self.gauss_fitter  
+        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
         
 # for compatibility and easy mixing:
 mixin_class = MonoBladeMixin
