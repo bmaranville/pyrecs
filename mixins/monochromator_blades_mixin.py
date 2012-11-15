@@ -71,6 +71,92 @@ class MonoBladeMixin:
         Fitter = self.gauss_fitter  
         self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
         
+    def RapidScanMonoBlade(self, bladenum=None, start_angle=None, stop_angle=None, client_plotter=None):
+         
+    #def RapidScan(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
+        """ new, non-ICP function: count while moving.
+                returns: (position, counts, elapsed_time) """
+        
+        (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        title = 'ic.RapidScanMonoBlade(%d, %.4f, %.4f)' % (bladenum, start_angle, stop_angle)
+        
+        position_list = []
+        ptime_list = []
+        cum_counts_list = []
+        counts_list = []
+        cps_list = []
+        ctime_list = []
+        self.DriveMonoBladeByName(['b%d' % (monoblade,)], [start_angle])
+        self.scaler.ResetScaler()
+        self.scaler.CountByTime(-1)
+        start_time = time.time()
+        
+        t1 = time.time() - start_time
+        cum_counts_list.append( self.scaler.GetCounts()[2] )
+        t2 = time.time() - start_time
+        ctime = (t1+t2)/2.0
+        ctime_list.append(ctime)
+        pos =  self.mbc.GetMotorPos(bladenum)
+        position_list.append(pos)
+        t3 = time.time() - start_time
+        ptime = ((t2+t3)/2.0)
+        
+        hard_stop = stop_angle
+        self.mbc.MoveMotor(bladenum, hard_stop)
+        
+        pos = start_angle
+        while self.mbc.CheckMoving(bladenum):
+        #soft_pos = start_angle
+        #tol = self.ip.GetMotorTolerance(motornum)
+        #while 1:
+            if self._aborted:
+                self.write("aborted")
+                #if not reraise_exceptions:
+                #    self._aborted = False
+                break
+            t1 = time.time() - start_time
+            cum_counts_list.append( self.scaler.GetCounts()[2] )
+            t2 = time.time() - start_time
+            new_pos =  self.mbc.GetMotorPos(bladenum)
+            t3 = time.time() - start_time
+            
+            new_count = cum_counts_list[-1] - cum_counts_list[-2]
+            counts_list.append(new_count)
+            new_ctime = (t1+t2)/2.0
+            ctime_list.append(new_ctime)
+            new_cps = new_count/(new_ctime - ctime)
+            cps_list.append(new_cps)
+            
+            new_ptime = (t2+t3)/2.0
+            pslope = (new_pos - pos) / (new_ptime - ptime)
+            estimated_pos = pos + ((new_ctime - ptime) * pslope) # linearly interpolate, 
+            # based on count timestamp vs. position timestamp
+            position_list.append(estimated_pos)
+            
+            self.write(str(position_list[-1]) + '\t'+ str(cps_list[-1]))
+            out_str = '%.4f\t%.4f' % (estimated_pos, new_cps)
+            tmp_file = open(tmp_path, 'a')
+            tmp_file.write(out_str + '\n')
+            tmp_file.close()
+            self.updateGnuplot(tmp_path, title)
+            
+            if abs(new_soft_pos - soft_pos) <= tol:
+                break
+            pos = new_pos
+            ptime = new_ptime
+            ctime = new_ctime
+            time.sleep(0.2)
+        
+        self.scaler.AbortCount()
+        count_time, monitor, counts = self.scaler.GetCounts()
+        self.scaler.GetElapsed()
+        self.write('count time: %.3f' % count_time)
+        self.mbc.StopMotor(bladenum)
+        while self.mbc.CheckMoving(bladenum) == True: # make sure we're stopped before disabling
+            time.sleep(self.loopdelay)
+       
+        return position_list, cps_list, ctime_list 
+           
 # for compatibility and easy mixing:
 mixin_class = MonoBladeMixin
 # to use:
