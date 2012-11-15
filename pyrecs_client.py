@@ -1,4 +1,4 @@
-from IPython import InteractiveShell
+#from IPython import InteractiveShell
 from icp_compat import prefilter_ICP
 import signal
 import xmlrpclib

@@ -7,12 +7,13 @@ home_dir = '/usr/local'
 DEFAULT_VME_PORT = '/dev/ttyUSB0'
 DEBUG = False
 MAXMOTOR = 24
-MAXMOTS = 30
+MAXMOTS = 40 # for PBR and MAGIK - 30 for other instruments
 MOTPOS_BUF = os.path.join(home_dir, 'icp/cfg/MOTPOS.BUF')
 MOTORS_BUF = os.path.join(home_dir, 'icp/cfg/MOTORS.BUF')
 INSTR_CFG = os.path.join(home_dir, 'icp/cfg/INSTR.CFG')
 DEBUG = False
 RS232_CFG = os.path.join(home_dir, 'icp/cfg/rs232.conf')
+FIELD_LENGTH = 64 # new PBR and MAGIK - this is 40 for BT4 etc.
 
 class InstrumentParameters:
     """ class to handle values stored in ICP config files.  Convert to XML at your leisure"""
@@ -26,6 +27,7 @@ class InstrumentParameters:
         self.loadInstrCfg()
         self.loadMotors()
         self.num_motors = self.InstrCfg['#mots']
+        self.field_length = FIELD_LENGTH
         
     def loadRS232Params(self):
         self.rs232 = {}
@@ -85,8 +87,9 @@ class InstrumentParameters:
             data = f.readline().split()
             motordict = OrderedDict()
             for key, datum in zip(motorkeys, data):
-                motordict[key] = int(datum)
-            motors[i+1] = motordict
+                motordict[key] = int(float(datum))
+            if motordict['SpcAddr'] == 0: 
+                motors[i+1] = motordict
         self.InstrCfg['motors'] = motors    
         f.close()
               
@@ -147,7 +150,7 @@ class InstrumentParameters:
         psd = {}
         
     def GetCollimationMosaic(self):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers and ints
         seek_pos = (self.maxmots + 4 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 4, with -1 offset 
@@ -162,7 +165,7 @@ class InstrumentParameters:
         return collimation, mosaic
     
     def GetWavelength(self):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers and ints
         seek_pos = (self.maxmots + 4 - 1) * field_length * entry_length + 7 * entry_length
         # the stuff we're looking for is at maxmots + 4, with -1 offset 
@@ -175,7 +178,7 @@ class InstrumentParameters:
         return wavelength
         
     def SetWavelength(self, wl):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers and ints
         seek_pos = (self.maxmots + 4 - 1) * field_length * entry_length + 7 * entry_length
         # the stuff we're looking for is at maxmots + 4, with -1 offset 
@@ -216,7 +219,7 @@ class InstrumentParameters:
         return tolerances   
           
     def GetUpperLimits(self):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 2 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 2, with -1 offset 
@@ -228,7 +231,7 @@ class InstrumentParameters:
         return list(struct.unpack('%df' % self.maxmots, data))
         
     def SetUpperLimit(self, motornum, position):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 2 - 1) * field_length * entry_length
         seek_pos += (motornum - 1) * entry_length
@@ -241,7 +244,7 @@ class InstrumentParameters:
         return 
         
     def GetLowerLimits(self):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 3 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 3, with -1 offset 
@@ -253,7 +256,7 @@ class InstrumentParameters:
         return list(struct.unpack('%df' % self.maxmots, data))
         
     def SetLowerLimit(self, motornum, position):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 3 - 1) * field_length * entry_length
         seek_pos += (motornum - 1) * entry_length
@@ -276,7 +279,7 @@ class InstrumentParameters:
         return fixed_motors
 
     def GetMotorsFixed(self):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 5 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 5, with -1 offset 
@@ -301,7 +304,7 @@ class InstrumentParameters:
         if motornum > self.maxmots:
             return
         true_value = 1
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 5 - 1) * field_length * entry_length
         seek_pos += (motornum - 1) * entry_length
@@ -317,7 +320,7 @@ class InstrumentParameters:
         if motornum > self.maxmots:
             return
         false_value = 0
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 5 - 1) * field_length * entry_length
         seek_pos += (motornum - 1) * entry_length
@@ -332,7 +335,7 @@ class InstrumentParameters:
     def GetROI(self):
         """ get the Region of Interest (ROI) for Position Sensitive Detector, 
         i.e. xmin, xmax, ymin, ymax, numx, numy """
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 7 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 7, with -1 offset
@@ -361,7 +364,7 @@ class InstrumentParameters:
             
         new_str = struct.pack('6I', newxmin, newymin, newxmax, newymax, newnumx, newnumy)
         
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 7 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 7, with -1 offset
@@ -375,7 +378,7 @@ class InstrumentParameters:
         return [newxmin, newymin, newxmax, newymax, newnumx, newnumy]
             
     def GetFcal(self):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 6 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 6, with -1 offset
@@ -416,7 +419,7 @@ class InstrumentParameters:
         for i in range(num_pols):
             new_str += struct.pack('f', fcal[i+1]['engy'])
         
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (self.maxmots + 6 - 1) * field_length * entry_length
         # the stuff we're looking for is at maxmots + 6, with -1 offset
@@ -432,7 +435,7 @@ class InstrumentParameters:
         data = f_in.read()
         f_in.close()
         motors = []
-        field_length = 40 
+        field_length = self.field_length 
         entry_length = 4 # 32-bit floating-point numbers
         for i in range(self.maxmots):
             chunk = data[i*field_length*entry_length:(i+1)*field_length*entry_length]
@@ -440,7 +443,7 @@ class InstrumentParameters:
         return motors
         
     def GetSoftMotorOffset(self, motornum):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = ((motornum - 1) * field_length * entry_length) + entry_length
         # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero
@@ -452,7 +455,7 @@ class InstrumentParameters:
         return struct.unpack('f', data)[0]
         
     def GetHardMotorPos(self, motornum):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = ((motornum - 1) * field_length * entry_length) + 0
         # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero
@@ -464,7 +467,7 @@ class InstrumentParameters:
         return struct.unpack('f', data)[0]
               
     def SetSoftMotorOffset(self, motornum, offset):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = ((motornum - 1) * field_length * entry_length) + entry_length
         # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero
@@ -475,7 +478,7 @@ class InstrumentParameters:
         f_out.close()
         
     def SetHardMotorPos(self, motornum, hard_pos):
-        field_length = 40
+        field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = ((motornum - 1) * field_length * entry_length) + 0
         # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero

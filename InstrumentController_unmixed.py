@@ -1034,7 +1034,7 @@ class InstrumentController:
             hard_line += 'A%02d=%8.3f ' % (m, hard_pos)
             #self.write(' Soft: A%02d=%7.3f\n Hard: A%02d=%7.3f' % (motornum, soft_pos, motornum, hard_pos))
             #self.write('A%02d: %.4f\t' % (i, pos))
-            if ( ii % 5 == 0) or (ii == self.num_motors):
+            if ( ii % 5 == 0) or (ii >= len(self.motor_numbers)):
                 self.write(soft_line + '\n')
                 self.write(hard_line + '\n')
                 soft_line = ' Soft: '

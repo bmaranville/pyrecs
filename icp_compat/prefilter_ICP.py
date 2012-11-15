@@ -93,16 +93,6 @@ def generate_prefilter(instrument_controller, log_unfiltered = False):
         
     return prefilter_ICP
 
-#def activate_prefilter(instrument_controller, log_unfiltered = False):
-#    from IPython import InteractiveShell 
-#    """Rebind the ICP filter to be the new IPython prefilter, 
-#    with a callback to the instrument_controller write() method for logging"""
-#    InteractiveShell.prefilter = generate_prefilter(instrument_controller, log_unfiltered)
-
-#def deactivate_prefilter():
-#    from IPython import InteractiveShell 
-#    """Reset the filter."""
-#    InteractiveShell.prefilter = InteractiveShell._prefilter
 
 
 # Just a heads up at the console
@@ -207,19 +197,34 @@ class ICPTransformer(object):
         line = prefiltered_cmds
         
         return line
-        
-icpt = ICPTransformer()
 
-def activate_prefilter(instrument_controller, log_unfiltered = False):
-    icpt.ic = instrument_controller
-    icpt.log_unfiltered = log_unfiltered
+try:
+    get_ipython() # test for newer version of Ipython
     
-    ip = get_ipython()
-    ip.prefilter_manager.register_transformer(icpt)
-    return
-    
-def deactivate_prefilter():
-    ip = get_ipython()
-    ip.prefilter_manager.unregister_transformer(icpt)
-    return
-    
+    icpt = ICPTransformer()
+    def activate_prefilter(instrument_controller, log_unfiltered = False):
+        icpt.ic = instrument_controller
+        icpt.log_unfiltered = log_unfiltered
+        
+        ip = get_ipython()
+        ip.prefilter_manager.register_transformer(icpt)
+        return
+        
+    def deactivate_prefilter():
+        ip = get_ipython()
+        ip.prefilter_manager.unregister_transformer(icpt)
+        return
+        
+except NameError:
+    # old-style prefiltering (ipython 0.10)
+    def activate_prefilter(instrument_controller, log_unfiltered = False):
+        from IPython.iplib import InteractiveShell 
+        """Rebind the ICP filter to be the new IPython prefilter, 
+        with a callback to the instrument_controller write() method for logging"""
+        InteractiveShell.prefilter = generate_prefilter(instrument_controller, log_unfiltered)
+
+    def deactivate_prefilter():
+        from IPython.iplib import InteractiveShell 
+        """Reset the filter."""
+        InteractiveShell.prefilter = InteractiveShell._prefilter
+        
