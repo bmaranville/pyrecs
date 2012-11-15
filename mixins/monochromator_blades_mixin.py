@@ -1,7 +1,7 @@
 from pyrecs.drivers.EZ_motor import EZStepper
 #import functools
 #from mixin import MixIn
-MONO_BLADE_LINE = 3
+MONO_BLADE_LINE = 2
 NUM_BLADES = 13
 
 class MonoBladeMixin:
@@ -126,10 +126,13 @@ class MonoBladeMixin:
             ctime_list.append(new_ctime)
             new_cps = new_count/(new_ctime - ctime)
             cps_list.append(new_cps)
+            # we want the timestamp of the center of the counts window
+            t_center = (new_ctime + ctime)/2.0
             
             new_ptime = (t2+t3)/2.0
             pslope = (new_pos - pos) / (new_ptime - ptime)
-            estimated_pos = pos + ((new_ctime - ptime) * pslope) # linearly interpolate, 
+            # now we want to calculate the position at the center of the counts window
+            estimated_pos = pos + ((t_center - ptime) * pslope) # linearly interpolate, 
             # based on count timestamp vs. position timestamp
             position_list.append(estimated_pos)
             
@@ -140,8 +143,8 @@ class MonoBladeMixin:
             tmp_file.close()
             self.updateGnuplot(tmp_path, title)
             
-            if abs(new_soft_pos - soft_pos) <= tol:
-                break
+            #if abs(new_soft_pos - soft_pos) <= tol:
+            #   break
             pos = new_pos
             ptime = new_ptime
             ctime = new_ctime
