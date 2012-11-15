@@ -13,9 +13,10 @@ from InstrumentController_unmixed import InstrumentController
 
 DEBUG = True
 
-WHITELIST = ['129.6.123.108',
-             '129.6.120.90', 
-             '129.6.120.84',
+WHITELIST = ['129.6.123.195', # bbm's desktop
+             '129.6.120.90', # magik
+             '129.6.120.84', # pbr
+             '129.6.120.94', # bt4
              '127.0.0.1',
              'localhost']
 
