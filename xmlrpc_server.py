@@ -72,7 +72,7 @@ ic = InstrumentController()
 mixins = {}
 for mixin_module in AVAILABLE_MIXINS:
     _temp = __import__('pyrecs.mixins', fromlist=[mixin_module])
-    mixin_class = _temp.__getattribute__(mixin_name).__getattribute__('mixin_class')
+    mixin_class = _temp.__getattribute__(mixin_module).__getattribute__('mixin_class')
     mixin_name = mixin_class.__name__
     mixins[mixin_name] = mixin_class
 
