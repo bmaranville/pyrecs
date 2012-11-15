@@ -7,7 +7,9 @@ import threading, sys
 import socket
 
 from InstrumentController_unmixed import InstrumentController
+import pyrecs.mixins
 
+AVAILABLE_MIXINS = pyrecs.mixins.__all__
 
 #import xmlrpclib
 
@@ -67,6 +69,33 @@ class XMLRPCWriter:
 
 ic = InstrumentController()
 # Create server in a new thread
+mixins = {}
+for mixin_module in AVAILABLE_MIXINS:
+    _temp = __import__('pyrecs.mixins', fromlist=[mixin_module])
+    mixin_class = _temp.__getattribute__(mixin_name).__getattribute__('mixin_class')
+    mixin_name = mixin_class.__name__
+    mixins[mixin_name] = mixin_class
+
+active_mixins = set()
+
+def update_mixins():
+    InstrumentController.__bases__ = tuple(active_mixins)
+    for mixin in active_mixins:
+        mixin.__init__(ic)
+    
+def activate_mixin(mixin_name):
+    if mixin_name in mixins:
+        active_mixins.add(mixins[mixin_name])
+        update_mixins()
+    else:
+        return "not a valid mixin class"
+        
+def deactivate_mixin(mixin_name):
+    try: 
+        active_mixins.remove(mixins[mixin_name])
+        update_mixins()
+    except KeyError:
+        return "not an active mixin"
 
 #signalserver = SimpleXMLRPCServer((socket.getfqdn(), 8000),
 #                        requestHandler=RequestHandler)
