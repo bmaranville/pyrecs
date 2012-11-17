@@ -25,7 +25,8 @@ from pyrecs.icp_compat import ibuffer
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
 from pyrecs.publishers import update_xpeek
-from pyrecs.publishers import ICPDataFile, GnuplotPublisher, publisher
+from pyrecs.publishers import ICPDataFile, publisher
+from pyrecs.publishers.gnuplot_publisher import GnuplotPublisher
 
 
 FLOAT_ERROR = 1.0e-7
