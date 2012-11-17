@@ -481,7 +481,7 @@ class InstrumentController:
         """ console command accessed via equivalent ICP command 'ct':
         get counts for a given duration using the active counter """
         result = self.Count(duration)
-        msg = 'count time: %.4f  counts: %g' % (result['count_time'], result['counts'])
+        msg = 'count time: %.4f monitor: %g counts: %g' % (result['count_time'], result['monitor'], result['counts'])
         self.write(msg, file_msg = ('Count: '+ msg))
         
     def PrintMonitor(self, duration=-5):
@@ -1061,13 +1061,13 @@ class InstrumentController:
     def PrintLowerLimits(self):
         result = self.ip.GetLowerLimits()
         for i in self.motor_numbers:
-            self.write('L%d: %.4f\t' % (i, result[i]))
+            self.write('L%d: %.4f\t' % (i, result[i-1]))
     
     
     def PrintUpperLimits(self):
         result = self.ip.GetUpperLimits()
         for i in self.motor_numbers:
-            self.write('U%d: %.4f\t' % (i, result[i]))
+            self.write('U%d: %.4f\t' % (i, result[i-1]))
         
     @validate_motor
     def SetLowerLimit(self, motornum, position):
@@ -1316,7 +1316,7 @@ class InstrumentController:
     def updateGnuplot(self, filename, title, gaussfit_params = None):
         if not self.plot:
             # we haven't plotted yet - create the gnuplot window
-            self.plot = Popen("gnuplot_andr", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+            self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
         else:
             if not self.plot.poll() == None:
                 # we've closed the graph window for some reason: open a new one

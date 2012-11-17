@@ -191,7 +191,8 @@ class InstrumentParameters:
 
     def GetMotorBacklash(self, motornum):
         """ return the backlash in real units (Backlash_pulses / (Pulses/Deg)) """
-        motor_data = self.MotorsBuf['motors'][motornum]
+        
+        motor_data = self.InstrCfg['motors'][motornum]
         backlash_pulses = motor_data['Backlash']
         pulses_per_deg = motor_data['Pulses/Deg']
         if int(pulses_per_deg) == 0:
@@ -202,7 +203,7 @@ class InstrumentParameters:
         
     def GetMotorTolerance(self, motornum):
         """ return the tolerance (acceptable offset from target value) =  (tolerance_pulses / (Pulses/Deg)) """
-        motor_data = self.MotorsBuf['motors'][motornum]
+        motor_data = self.InstrCfg['motors'][motornum]
         tolerance_pulses = motor_data['Err']
         pulses_per_deg = motor_data['Pulses/Deg']
         if int(pulses_per_deg) == 0:
@@ -214,8 +215,10 @@ class InstrumentParameters:
     def GetAllMotorTolerances(self):
         """ return a dictionary of tolerance values for all motors up to MAXMOTS """    
         tolerances = {}
-        for i in range(1, self.maxmotor+1):
-            tolerances[i] = self.GetMotorTolerance(i)
+        for i in self.InstrCfg['motors']:
+        #range(1, self.maxmotor+1):
+            motor = self.InstrCfg['motors'][i]
+            tolerances[motor['M']] = self.GetMotorTolerance(i)
         return tolerances   
           
     def GetUpperLimits(self):

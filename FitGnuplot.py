@@ -86,6 +86,10 @@ class FitGaussGnuplot(FitGnuplot):
         for x,y in zip(xdata,ydata):
             weighted_x += x * (y - p0['y_offset'])
             sum_relative_y += (y - p0['y_offset'])
+        if sum_relative_y == 0.0:
+            p0['center'] = (xdata[-1] + xdata[0])/2.0
+            p0['FWHM'] = abs(xdata[-1] - xdata[0])/2.0
+            return p0
         x0 = weighted_x/sum_relative_y
         moment_sum = 0.
         for x,y in zip(xdata,ydata):

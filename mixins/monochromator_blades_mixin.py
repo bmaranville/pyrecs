@@ -31,29 +31,36 @@ class MonoBladeMixin:
         
         # ICP commands:
         self.dm = self.mbc.MoveMotor
-        self.setm = self.mbc.SetMotorPos
+        self.setm = self.SetMonoBladePosition
         self.pm = self.PrintMonoBladeAngle
         self.fpm = self.FindPeakMonoBlade
         
         # hook into the IC device registry:
         self.device_registry.update( {'monoblades':
                                 {'names': self.blade_names, 'updater': self.DriveMonoBladeByName }} )
+    
+    def SetMonoBladePosition(self, bladenum, pos):
+        self.mbc.SetMotorPos(bladenum, pos)
+        self.state['b%d' % (bladenum,)] = pos
         
     def DriveMonoBladeByName(self, blades_to_move, position_list):
         blade_list = [self.blade_lookup[s] for s in blades_to_move]
         # i.e. 'b3' is blade 3
         for b,p in zip(blade_list, position_list):
             self.dm(b, p)
+            self.state['b%d' % (b,)] = p
             
     def PrintMonoBladeAngle(self, bladenum=None):
         if bladenum:
             pos = self.mbc.GetMotorPos(bladenum)
             self.write('B%02d=%8.3f\n' % (bladenum, pos))
+            self.state['b%d' % (bladenum,)] = pos
         else:  # no motor specified - get them all
             out_line = ''
             for i, b in enumerate(self.blade_numbers):
                 pos = self.mbc.GetMotorPos(b)
                 out_line += 'B%02d=%8.3f ' % (b, pos)
+                self.state['b%d' % (b,)] = pos
                 if ( (i+1) % 5 == 0) or ((i+1) == len(self.blade_numbers)):
                     self.write(out_line + '\n')
                     out_line = ''
@@ -65,7 +72,8 @@ class MonoBladeMixin:
         Abort (ctrl-c) works the same as usual """
         numsteps = int( abs(float(mrange) / (mstep)) + 1)
         movable = 'b%d' % (bladenum,)
-        val_now = self.getState()[movable]
+        val_now = self.mbc.GetMotorPos(bladenum)
+        self.state[movable] = val_now
         mstart = val_now - ( int(numsteps/2) * mstep)
         comment = 'FP'
         Fitter = self.gauss_fitter  
