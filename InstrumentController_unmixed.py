@@ -25,7 +25,7 @@ from pyrecs.icp_compat import ibuffer
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
 from pyrecs.publishers import update_xpeek
-from pyrecs.publishers import ICPDataFile, publisher
+from pyrecs.publishers import ICPDataFile, GnuplotPublisher, publisher
 
 
 FLOAT_ERROR = 1.0e-7
@@ -65,56 +65,6 @@ class Fitter:
         """ do the fitting and return result (dict) where result[pn] = val, result[pn_err] = val_err """
         result = {}
         return result
-        
-
-class GnuplotPublisher(Publisher):
-    def __init__(self, auto_poisson_errorbars=True):
-        self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
-        self.auto_poisson_errorbars = auto_poisson_errorbars
-    
-    def publish_start(self, state, scan_definition, **kwargs):
-        """ called to record the start time of the measurement """
-        self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
-        
-    def publish_datapoint(self, state, scan_def):
-        outstr = ''
-        col=1
-        for movable in OrderedDict(scan_def['vary']):
-            # strict ICP format:
-            #outstr += '%10.4f    ' % state[movable]
-            outstr += '%14g    ' % state[movable]
-            col += 1
-        outstr += '%14g\n' % state['result']['counts']
-        counts_col = col
-        with open(self.tmp_path, 'a') as f:
-            f.write(outstr)            
-        title = scan_def['filename']
-        if self.auto_poisson_errorbars:
-            self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
-        else:
-            self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
-        
-    def publish_end(self, state, scan_def):
-        counts_col = len(scan_def['vary']) + 1
-        title = scan_def['filename']
-        if state.has_key('result') and state['result'].has_key('fit_result'):
-            fit_params = state['result']['fit_result']
-            self.plot.stdin.write('f(x) = %s \n' % state['result']['fit_func'])
-            for pn in fit_params.keys():
-                self.plot.stdin.write('%s = %f \n' % (pn, fit_params[pn]))
-            if self.auto_poisson_errorbars:
-                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,counts_col,title))
-            else:
-                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,title))
-            self.plot.stdin.write('f(x) w lines lt 2 lc rgb "red"\n')
-        else:
-            if self.auto_poisson_errorbars:
-                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
-            else:
-                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
-
             
 class StdoutWriter:
     """ writes output to sys.stdout and flushes """
@@ -425,7 +375,7 @@ class InstrumentController:
         and return 'prefix + (highest+1) + suffix' """
         if path is None: path = self.datafolder 
         fl = glob.glob1(path, prefix+'*'+suffix)
-        fl.sort()
+        fl.sort(key=lambda fn: fn[len(prefix):-len(suffix)])
         if len(fl) == 0:
             # first scan!
             biggest = 0
@@ -1202,13 +1152,13 @@ class InstrumentController:
     def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False):
         suffix = '.' + self.ip.GetNameStr().lower()
         if t_scan:
-            new_filename = self.getNextFilename('fpt_%s' % movable, suffix)
+            new_filename = self.getNextFilename('fpt_%s_' % movable, suffix)
             pos_expression = '%f + (i * %f)' % (mstart, mstep)
             if t_movable == None: t_movable = 'a%d' % (int(movable[1:])-FPT_OFFSET,)
             pos_expression_t = str(movable) + ' / 2.0' 
             scan_expr = [(movable, pos_expression), (t_movable, pos_expression_t)]
         else:
-            new_filename = self.getNextFilename('fp_%s' % movable, suffix)
+            new_filename = self.getNextFilename('fp_%s_' % movable, suffix)
             # put this in terms the scanner understands:
             pos_expression = '%f + (i * %f)' % (mstart, mstep)
             scan_expr = [(movable, pos_expression)]

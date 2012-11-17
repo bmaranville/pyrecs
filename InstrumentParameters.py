@@ -102,6 +102,8 @@ class InstrumentParameters:
             namestr = 'XR%d' % nsta
         elif nsta == -11:
             namestr = 'CG1'
+        elif nsta == -1:
+            namestr = 'PBR'
         else:
             namestr = 'NG%d' % nsta
         
