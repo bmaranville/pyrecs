@@ -1,7 +1,7 @@
 from numpy import exp, zeros, float64, vectorize, array, where, empty, linalg
 import datetime, time
-import wx, wx.calendar
 import simplejson, os
+#import wx, wx.calendar
 
 class He3Analyzer:
     """ an object that contains information about a particular 3He cell, 
@@ -335,6 +335,10 @@ class He3AnalyzerCollection:
 class wxHe3AnalyzerCollection(He3AnalyzerCollection):
     """ version with wx GUI interaction for AddNew and getActiveCell """
     
+    def __init__(self, *args, **kwargs):
+        import wx, wx.calendar
+        He3AnalyzerCollection.__init__(self, *args, **kwargs)
+    
     def AddNew(self, params = None, autosave = True):
         params_out = He3Analyzer.default_params.copy()
         params_out.update(params)
@@ -369,6 +373,7 @@ class wxHe3AnalyzerCollection(He3AnalyzerCollection):
             dlg.Destroy()
             self.AddNew(params={"t0_str":ref_datetime.ctime()})
 
+"""
 class get_cell_params_dialog(wx.Dialog):
     def __init__(self, parent, id, title, params):
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title, size=(600,400), style = wx.DEFAULT_DIALOG_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
@@ -532,5 +537,5 @@ class get_cell_params_dialog(wx.Dialog):
       
     def onExit(self, event):
         self.Close(True)
-    
+"""   
     

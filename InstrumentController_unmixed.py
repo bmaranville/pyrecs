@@ -25,7 +25,8 @@ from pyrecs.icp_compat import ibuffer
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
 from pyrecs.publishers import update_xpeek
-from pyrecs.publishers import ICPDataFile, GnuplotPublisher, publisher
+from pyrecs.publishers import ICPDataFile, publisher
+from pyrecs.publishers.gnuplot_publisher import GnuplotPublisher
 
 
 FLOAT_ERROR = 1.0e-7
@@ -612,12 +613,13 @@ class InstrumentController:
         def recursive_motor_move(motornum_list, hard_position_list, soft_position_list):
             if len(motornum_list) == 0: return # when the list is empty, start the while loop
             motnum = motornum_list.pop() # pull the top motor off the list
+            motname = 'a%d' % (motnum,)
             pos = hard_position_list.pop() # pull the top position off the list (reduces list length)
             softpos = soft_position_list.pop()
             self.mc.EnableMotor(motnum)
             self.mc.MoveMotor(motnum, pos)
             self.ip.SetHardMotorPos(motnum, pos) # update MOTORS.BUF
-            self.state[self.motor_names[motnum-1]] = softpos # update state dictionary
+            self.state[motname] = softpos # update state dictionary
             recursive_motor_move(motornum_list, hard_position_list, soft_position_list)
             # this part doesn't get run until all motors are enabled and moving:
             while 1:
@@ -632,7 +634,7 @@ class InstrumentController:
             new_hardpos = self.mc.GetMotorPos(motnum)
             new_softpos = new_hardpos - self.ip.GetSoftMotorOffset(motnum)
             self.ip.SetHardMotorPos(motnum, new_hardpos) # update MOTORS.BUF
-            self.state[self.motor_names[motnum-1]] = new_softpos # update state dictionary
+            self.state[motname] = new_softpos # update state dictionary
             # and it doesn't exit until all sub-calls have returned (all motors are stopped and disabled)
             return
             
