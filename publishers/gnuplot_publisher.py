@@ -1,6 +1,7 @@
 from publisher import Publisher
 from subprocess import Popen, PIPE
 from pyrecs.ordered_dict import OrderedDict
+import tempfile
 
 class GnuplotPublisher(Publisher):
     def __init__(self, auto_poisson_errorbars=True):
