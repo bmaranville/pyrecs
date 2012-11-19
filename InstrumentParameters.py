@@ -18,6 +18,7 @@ FIELD_LENGTH = 64 # new PBR and MAGIK - this is 40 for BT4 etc.
 class InstrumentParameters:
     """ class to handle values stored in ICP config files.  Convert to XML at your leisure"""
     def __init__(self):
+        self.field_length = FIELD_LENGTH
         self.rs232cfgfile = RS232_CFG
         self.motorsbuffile = MOTORS_BUF
         self.motposbuffile = MOTPOS_BUF
@@ -27,7 +28,7 @@ class InstrumentParameters:
         self.loadInstrCfg()
         self.loadMotors()
         self.num_motors = self.InstrCfg['#mots']
-        self.field_length = FIELD_LENGTH
+        
         
     def loadRS232Params(self):
         self.rs232 = {}
@@ -111,13 +112,15 @@ class InstrumentParameters:
            
     def loadMotors(self):
         self.MotorsBuf = {}
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers and ints
         f = open(self.motorsbuffile, 'rb')
         fcontents = f.read()
         f.close()
         data_chunks = []
-        num_chunks = len(fcontents)/(160)
+        num_chunks = len(fcontents)/(field_length * entry_length)
         for i in range(num_chunks):
-            data_chunks.append(fcontents[i*160:(i+1)*160])
+            data_chunks.append(fcontents[i*field_length*entry_length:(i+1)*field_length*entry_length])
         
         #the motor data is structured just like in INSTR.CFG.  Not an accident.
         motorkeys = ['Base', 'Ramp', 'Top', 'Pulses/Deg', 'Backlash', 'Err', 'Type']
@@ -191,17 +194,51 @@ class InstrumentParameters:
         f_out.close()
         return
 
-    def GetMotorBacklash(self, motornum):
+    def oldGetMotorBacklash(self, motornum):
         """ return the backlash in real units (Backlash_pulses / (Pulses/Deg)) """
         backlashes = self.GetAllMotorBacklashes()
         if not motornum in backlashes.keys():
             print "not a valid motor"
         else:
             return backlashes[motornum]
+    
+    def SetMotorBacklash(self, motornum, backlash):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        motor = self.MotorsBuf['motors'][motornum]
+        pulses_per_deg = motor['Pulses/Deg']
+        backlash_pulses = int(backlash * pulses_per_deg)
+        seek_pos = (motornum - 1) * field_length * entry_length
+        seek_pos += 4 * entry_length # backlash is 5th entry: 4 if counting from 0
+        # the stuff we're looking for is at maxmots + 2, with -1 offset 
+        f_out = open(self.motorsbuffile, 'r+b')
+        f_out.seek(seek_pos)
+        f_out.write(struct.pack('i', backlash_pulses))
+        f_out.flush()
+        f_out.close()
+        return 
+    
+    def GetMotorBacklash(self, motornum):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        motor = self.MotorsBuf['motors'][motornum]
+        pulses_per_deg = motor['Pulses/Deg']
+        seek_pos = (motornum - 1) * field_length * entry_length
+        seek_pos += 4 * entry_length # backlash is 5th entry: 4 if counting from 0
+        # the stuff we're looking for is at maxmots + 2, with -1 offset 
+        f_in = open(self.motorsbuffile, 'rb')
+        f_in.seek(seek_pos)
+        data = f_in.read(entry_length)
+        f_in.flush()
+        f_in.close()
+        backlash_pulses = struct.unpack('i', data)[0]
+        print backlash_pulses
+        backlash = float(backlash_pulses) / float(pulses_per_deg)
+        return backlash
         
     def GetMotorTolerance(self, motornum):
         """ return the tolerance (acceptable offset from target value) =  (tolerance_pulses / (Pulses/Deg)) """
-        motor_data = self.InstrCfg['motors'][motornum]
+        motor_data = self.MotorsBuf['motors'][motornum]
         tolerance_pulses = motor_data['Err']
         pulses_per_deg = motor_data['Pulses/Deg']
         if int(pulses_per_deg) == 0:
@@ -215,14 +252,15 @@ class InstrumentParameters:
         backlashes = {}
         for i in self.InstrCfg['motors']:
         #range(1, self.maxmotor+1):
-            motor = self.InstrCfg['motors'][i]
+            motor = self.MotorsBuf['motors'][i]
             backlash_pulses = motor['Backlash']
             pulses_per_deg = motor['Pulses/Deg']
             if int(pulses_per_deg) == 0:
                 backlash = 0.0
             else: 
                 backlash = float(backlash_pulses) / float(pulses_per_deg)
-            backlashes[motor['M']] = backlash
+            M = self.InstrCfg['motors'][i]['M']
+            backlashes[M] = backlash
         return backlashes 
         
     def GetAllMotorTolerances(self):
