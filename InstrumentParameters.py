@@ -127,7 +127,7 @@ class InstrumentParameters:
         motors = {}
         num_mots = int(self.InstrCfg['#mots'])
         self.maxmotor = num_mots
-        for i in range(num_mots):
+        for i in range(self.maxmots):
             line = data_chunks[i]
             data = struct.unpack('7i', line[:7*4])
             motordict = {}
@@ -137,7 +137,6 @@ class InstrumentParameters:
         self.MotorsBuf['motors'] = motors
             
         self.MotorsCfg = {}
-        #data_chunks from num_mots to self.maxmots are useless and ignored
         
         # will fill these in as needed... right now need psd parameters and fcal
         fcal = {}
@@ -295,16 +294,15 @@ class InstrumentParameters:
         backlashes = {}
         for i in self.InstrCfg['motors']:
             M = self.InstrCfg['motors'][i]['M']
-            backlashes[M] = self.GetMotorBacklash(i)
+            backlashes[M] = self.GetMotorBacklash(M)
         return backlashes 
         
     def GetAllMotorTolerances(self):
         """ return a dictionary of tolerance values for all motors up to MAXMOTS """    
         tolerances = {}
         for i in self.InstrCfg['motors']:
-        #range(1, self.maxmotor+1):
-            motor = self.InstrCfg['motors'][i]
-            tolerances[motor['M']] = self.GetMotorTolerance(i)
+            M = self.InstrCfg['motors'][i]['M']
+            tolerances[M] = self.GetMotorTolerance(M)
         return tolerances   
           
     def GetUpperLimits(self):
