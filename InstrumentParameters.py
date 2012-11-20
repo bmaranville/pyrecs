@@ -203,40 +203,65 @@ class InstrumentParameters:
             return backlashes[motornum]
     
     def SetMotorBacklash(self, motornum, backlash):
-        field_length = self.field_length
-        entry_length = 4 # 32-bit floating-point numbers
         motor = self.MotorsBuf['motors'][motornum]
         pulses_per_deg = motor['Pulses/Deg']
         backlash_pulses = int(backlash * pulses_per_deg)
-        seek_pos = (motornum - 1) * field_length * entry_length
-        seek_pos += 4 * entry_length # backlash is 5th entry: 4 if counting from 0
-        # the stuff we're looking for is at maxmots + 2, with -1 offset 
-        f_out = open(self.motorsbuffile, 'r+b')
-        f_out.seek(seek_pos)
-        f_out.write(struct.pack('i', backlash_pulses))
-        f_out.flush()
-        f_out.close()
-        return 
-    
-    def GetMotorBacklash(self, motornum):
+        self.SetMotorBacklashPulses(motornum, backlash_pulses)
+        return
+        
+    def SetMotorBacklashPulses(self, motornum, backlash_pulses):
         field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
-        motor = self.MotorsBuf['motors'][motornum]
-        pulses_per_deg = motor['Pulses/Deg']
         seek_pos = (motornum - 1) * field_length * entry_length
         seek_pos += 4 * entry_length # backlash is 5th entry: 4 if counting from 0
-        # the stuff we're looking for is at maxmots + 2, with -1 offset 
+        f_out = open(self.motorsbuffile, 'r+b')
+        f_out.seek(seek_pos)
+        f_out.write(struct.pack('i', int(backlash_pulses)))
+        f_out.flush()
+        f_out.close()
+        return
+        
+    def GetMotorBacklash(self, motornum):
+        motor = self.MotorsBuf['motors'][motornum]
+        pulses_per_deg = motor['Pulses/Deg']
+        backlash_pulses = self.GetMotorBacklashPulses(motornum)
+        backlash = float(backlash_pulses) / float(pulses_per_deg)
+        return backlash
+    
+    def GetMotorBacklashPulses(self, motornum):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        seek_pos = (motornum - 1) * field_length * entry_length
+        seek_pos += 4 * entry_length # backlash is 5th entry: 4 if counting from 0
         f_in = open(self.motorsbuffile, 'rb')
         f_in.seek(seek_pos)
         data = f_in.read(entry_length)
         f_in.flush()
         f_in.close()
         backlash_pulses = struct.unpack('i', data)[0]
-        print backlash_pulses
-        backlash = float(backlash_pulses) / float(pulses_per_deg)
-        return backlash
+        return backlash_pulses
         
-    def GetMotorTolerance(self, motornum):
+    def GetMotorTolerance(self, motornum):        
+        motor = self.MotorsBuf['motors'][motornum]
+        pulses_per_deg = motor['Pulses/Deg']
+        tolerance_pulses = self.GetMotorTolerancePulses(motornum)
+        tolerance = float(tolerance_pulses) / float(pulses_per_deg)
+        return tolerance
+    
+    def GetMotorTolerancePulses(self, motornum):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        seek_pos = (motornum - 1) * field_length * entry_length
+        seek_pos += 5 * entry_length # tolerance ('err') is 6th entry: 5 if counting from 0
+        f_in = open(self.motorsbuffile, 'rb')
+        f_in.seek(seek_pos)
+        data = f_in.read(entry_length)
+        f_in.flush()
+        f_in.close()
+        tolerance_pulses = struct.unpack('i', data)[0]
+        return tolerance_pulses  
+        
+    def oldGetMotorTolerance(self, motornum):
         """ return the tolerance (acceptable offset from target value) =  (tolerance_pulses / (Pulses/Deg)) """
         motor_data = self.MotorsBuf['motors'][motornum]
         tolerance_pulses = motor_data['Err']
@@ -247,20 +272,30 @@ class InstrumentParameters:
             tolerance = float(tolerance_pulses) / float(pulses_per_deg)
             return tolerance
     
+    def SetMotorTolerance(self, motornum, tolerance):       
+        motor = self.MotorsBuf['motors'][motornum]
+        pulses_per_deg = motor['Pulses/Deg']
+        tolerance_pulses = int(tolerance * pulses_per_deg)
+        self.SetMotorTolerancePulses(motornum, tolerance_pulses)
+        
+    def SetMotorTolerancePulses(self, motornum, tolerance_pulses):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        seek_pos = (motornum - 1) * field_length * entry_length
+        seek_pos += 5 * entry_length # tolerance ('err') is 6th entry: 5 if counting from 0
+        f_out = open(self.motorsbuffile, 'r+b')
+        f_out.seek(seek_pos)
+        f_out.write(struct.pack('i', int(tolerance_pulses)))
+        f_out.flush()
+        f_out.close()
+        return 
+    
     def GetAllMotorBacklashes(self):
         """ return a dictionary of backlash values for all motors up to MAXMOTS """    
         backlashes = {}
         for i in self.InstrCfg['motors']:
-        #range(1, self.maxmotor+1):
-            motor = self.MotorsBuf['motors'][i]
-            backlash_pulses = motor['Backlash']
-            pulses_per_deg = motor['Pulses/Deg']
-            if int(pulses_per_deg) == 0:
-                backlash = 0.0
-            else: 
-                backlash = float(backlash_pulses) / float(pulses_per_deg)
             M = self.InstrCfg['motors'][i]['M']
-            backlashes[M] = backlash
+            backlashes[M] = self.GetMotorBacklash(i)
         return backlashes 
         
     def GetAllMotorTolerances(self):
