@@ -247,6 +247,22 @@ class InstrumentParameters:
             tolerance = float(tolerance_pulses) / float(pulses_per_deg)
             return tolerance
     
+    def SetMotorTolerance(self, motornum, tolerance):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        motor = self.MotorsBuf['motors'][motornum]
+        pulses_per_deg = motor['Pulses/Deg']
+        tolerance_pulses = int(tolerance * pulses_per_deg)
+        seek_pos = (motornum - 1) * field_length * entry_length
+        seek_pos += 5 * entry_length # backlash is 5th entry: 4 if counting from 0
+        # the stuff we're looking for is at maxmots + 2, with -1 offset 
+        f_out = open(self.motorsbuffile, 'r+b')
+        f_out.seek(seek_pos)
+        f_out.write(struct.pack('i', tolerance_pulses))
+        f_out.flush()
+        f_out.close()
+        return 
+    
     def GetAllMotorBacklashes(self):
         """ return a dictionary of backlash values for all motors up to MAXMOTS """    
         backlashes = {}
