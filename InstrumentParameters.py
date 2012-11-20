@@ -203,8 +203,6 @@ class InstrumentParameters:
             return backlashes[motornum]
     
     def SetMotorBacklash(self, motornum, backlash):
-        field_length = self.field_length
-        entry_length = 4 # 32-bit floating-point numbers
         motor = self.MotorsBuf['motors'][motornum]
         pulses_per_deg = motor['Pulses/Deg']
         backlash_pulses = int(backlash * pulses_per_deg)
@@ -212,6 +210,8 @@ class InstrumentParameters:
         return
         
     def SetMotorBacklashPulses(self, motornum, backlash_pulses):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
         seek_pos = (motornum - 1) * field_length * entry_length
         seek_pos += 4 * entry_length # backlash is 5th entry: 4 if counting from 0
         f_out = open(self.motorsbuffile, 'r+b')
