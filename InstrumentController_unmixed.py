@@ -767,7 +767,7 @@ class InstrumentController:
         return data
     
     @validate_motor
-    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
+    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE, speed_ratio=1.0, step_time=0.2):
         """ new, non-ICP function: count while moving.
                 returns: (position, counts, elapsed_time)
         
@@ -779,6 +779,8 @@ class InstrumentController:
         'join [list [clock microseconds] [motor position 1] [scaler read] [motor position 1] [clock microseconds]] ";"'
         
         which might take 1 ms total, plus many milliseconds for transmission.
+        
+        speed_ratio reduces the vscale on the motor for the duration of the scan, then returns it to what it was before the scan.
         """ 
         (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
         title = 'ic.RapidScan(%d, %.4f, %.4f)' % (motornum, start_angle, stop_angle)
@@ -794,6 +796,14 @@ class InstrumentController:
         bin_time_list = []
         cps_list = []
         
+        if speed_ratio > 1.0 or speed_ratio <= 0.0: speed_ratio = 1.0 # protect against speeders and idiots.
+        
+        start_vscale = self.mc.sendCMD('set mc(%d,vscale)' % (motornum))
+        start_bscale = self.mc.sendCMD('set mc(%d,bscale)' % (motornum))
+        
+        reduced_vscale = speed_ratio * float(start_vscale)
+        reduced_bscale = speed_ratio * float(start_bscale)
+        
         self.DriveMotor(motornum, start_angle)
         self.scaler.ResetScaler()
         self.scaler.CountByTime(-1)
@@ -802,7 +812,12 @@ class InstrumentController:
         
         motor_offset = self.ip.GetSoftMotorOffset(motornum)        
         hard_stop = stop_angle + motor_offset
-        tstr, ctstr, motstr, ackstr = self.mc.sendCMD('join [list [counts microseconds] [scaler read] [motor position %d] [motor position %d %.6f]] ";"' % (motornum,motornum,hard_stop)).split(";")
+        # reduce the speed...
+        self.mc.sendCMD('set mc(%d,vscale) %.4f' % (motornum, reduced_vscale))
+        self.mc.sendCMD('set mc(%d,bscale) %.4f' % (motornum, reduced_bscale))
+        self.mc.sendCMD('MotorConfigLoad %d' % (motornum,))
+        
+        tstr, ctstr, motstr, ackstr = self.mc.sendCMD('join [list [clock microseconds] [scaler read] [motor position %d] [motor move %d %.6f]] ";"' % (motornum,motornum,hard_stop)).split(";")
         start_time = int(tstr)
         old_time = start_time
         time_list.append(start_time)
@@ -817,7 +832,9 @@ class InstrumentController:
         #soft_pos = start_angle
         tol = self.ip.GetMotorTolerance(motornum)
         readout_cmd = 'join [list [clock microseconds] [motor position %d] [scaler read] [motor position %d] [clock microseconds]] ";"' % (motornum, motornum)
-        while 1:
+        print "moving?", self.mc.CheckMoving(motornum)
+        #while 1:
+        while self.mc.CheckMoving(motornum):
             if self._aborted:
                 self.write("aborted")
                 #if not reraise_exceptions:
@@ -825,6 +842,7 @@ class InstrumentController:
                 break
                 
             t_bef, mot_bef, ctstr, mot_aft, t_aft = self.mc.sendCMD(readout_cmd).split(";")
+            print [t_bef, mot_bef, ctstr, mot_aft, t_aft]
             new_cum_count = float(ctstr.split()[2])
             cum_counts_list.append(new_cum_count)
             new_time = (int(t_bef) + int(t_aft))/2.0 - start_time # microseconds
@@ -847,20 +865,20 @@ class InstrumentController:
             new_bin_time = (new_time + old_time)/2.0
             bin_time_list.append(new_bin_time)
             
-            self.write(str(new_bin_position) + '\t'+ str(new_cps))
+            #self.write(str(new_bin_position) + '\t'+ str(new_cps))
             out_str = '%.4f\t%.4f' % (new_bin_position, new_cps)
             tmp_file = open(tmp_path, 'a')
             tmp_file.write(out_str + '\n')
             tmp_file.close()
-            self.updateGnuplot(tmp_path, title)
-            
-            if abs(new_soft_pos - soft_pos) <= tol:
-                break
+            self.updateGnuplot(tmp_path, title, error_bars=False) 
+
+            #if abs(new_soft_pos - soft_pos) <= tol:
+            #    break
             soft_pos = new_soft_pos
             old_time = new_time
             cum_count = new_cum_count
             
-            time.sleep(0.2)
+            time.sleep(step_time)
         
         self.scaler.AbortCount()
         count_time, monitor, counts = self.scaler.GetCounts()
@@ -872,6 +890,10 @@ class InstrumentController:
         if disable: self.mc.DisableMotor(motornum)
         new_pos =  self.mc.GetMotorPos(motornum)
         self.ip.SetHardMotorPos(motornum, new_pos) # update MOTORS.BUF
+        # return the motor to original speed.
+        self.mc.sendCMD('set mc(%d,vscale) %s' % (motornum, start_vscale))
+        self.mc.sendCMD('set mc(%d,bscale) %s' % (motornum, start_bscale))
+        self.mc.sendCMD('MotorConfigLoad %d' % (motornum,))
        
         return bin_position_list, cps_list, bin_time_list
         
@@ -1130,6 +1152,27 @@ class InstrumentController:
         return
     
     
+    def DryRunScan(self, scan_definition, extra_dicts = []):
+        
+        iterations = scan_definition['iterations']
+        scan_expr = OrderedDict(scan_definition['vary'])
+        new_state = OrderedDict(scan_definition['init_state'])
+        context = {}
+        context.update(math.__dict__)
+        context.update(deepcopy(new_state)) # default dictionaries to give context to calculations
+        for extra_dict in extra_dicts:
+            context.update(extra_dict)
+        
+        scan_state = {}
+        scan_states = []
+        for i in range(iterations):
+            scan_state['i'] = i
+            for d in scan_expr:
+                scan_state[d] = eval(str(scan_expr[d]), context, scan_state)
+            scan_states.append(deepcopy(scan_state))
+        
+        return scan_states
+                
     def RunScan(self, scan_definition, auto_increment_file=True):
         """runs a scan_definition with default publishers and FindPeak publisher """
         publishers = self.default_publishers + [publisher.RunScanPublisher()]
@@ -1150,6 +1193,11 @@ class InstrumentController:
         """ opens and runs a scan from a definition in a json file """
         scan_definition = simplejson.loads(open(json_filename,'r').read())
         self.RunScan(scan_definition)
+    
+    def DryRunScanFile(self, json_filename):
+        """ opens and runs a scan from a definition in a json file """
+        scan_definition = simplejson.loads(open(json_filename,'r').read())
+        return self.DryRunScan(scan_definition)
     
     def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False):
         suffix = '.' + self.ip.GetNameStr().lower()
@@ -1265,7 +1313,7 @@ class InstrumentController:
     def getLastFittedPeak(self):
         return self.last_fitted_peak
                   
-    def updateGnuplot(self, filename, title, gaussfit_params = None):
+    def updateGnuplot(self, filename, title, gaussfit_params = None, error_bars=True):
         if not self.plot:
             # we haven't plotted yet - create the gnuplot window
             self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -1279,10 +1327,15 @@ class InstrumentController:
             self.plot.stdin.write('b = %f \n' % gaussfit_params['amplitude'])
             self.plot.stdin.write('c = %f \n' % gaussfit_params['center'])
             self.plot.stdin.write('d = %f \n' % gaussfit_params['FWHM'])
-            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (filename,title))
+            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2))title \'%s\' w errorbars lt 2 ps 3 pt 7 lc rgb "green",' % (filename,title))
             self.plot.stdin.write('gauss(x) w lines lt 2 lc rgb "red"\n')
         else:
-            self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (filename,title))
+            if error_bars == True:
+                self.plot.stdin.write('plot \'%s\' u 1:2:(1+sqrt(2)) title \'%s\' w errorbars lt 2 ps 3 pt 7 lc rgb "red",' % (filename,title))
+                self.plot.stdin.write(' \'%s\' u 1:2 w l lt 2 lc rgb "red"\n' % (filename,))
+            else:
+                self.plot.stdin.write('plot \'%s\' u 1:2 title \'%s\' w lp lt 2 lc rgb "red" ps 3 pt 7\n' % (filename,title))
+        self.plot.stdin.flush()
             
     def GetIBufHeader(self, bufnum):
         return self.dataOutput.GenerateIBufferHeader(bufnum)
