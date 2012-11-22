@@ -36,7 +36,7 @@ class FlipperControlMixin:
         self.flm = functools.partial(self.SetFlipper, 0)
         self.fla = functools.partial(self.SetFlipper, 1)
         self.rm = functools.partial(self.GetFlippingRatio, 0)
-        self.ra = functools.partial(self.GetFlippingRatio, 0)
+        self.ra = functools.partial(self.GetFlippingRatio, 1)
         self.iset = self.SetFlipperPSCurr
         self.vset = self.SetFlipperPSVolt
         self.iscan = self.IScan
@@ -90,6 +90,35 @@ class FlipperControlMixin:
             self.flipper_ps[ps_num].SetCurrent(0.0)
             self.flipper_ps[ps_num+1].SetCurrent(0.0)
         self.state['flipper%dstate' % flippernum] = enable
+        
+    def GetFlippingRatio(self, flippernum, duration):
+        """ flippers are numbered... flipper 0 is monochromator, flipper 1 is at analyzer usually
+        flipper 0 has two power supplies (1 and 2), for flipping and compensation
+        flipper 1 also has two (3 and 4)...
+        this command turns the flipper off and measures, then repeats with the flipper on """
+        # turn them on one at a time:
+        self.SetFlipper(flippernum, False) # turn it off
+        result = self.Count(duration)
+        off_counts = result['counts']
+        msg = 'FLIPPER %d OFF:\ncount time: %.4f monitor: %g counts: %g \n' % (flippernum, result['count_time'], result['monitor'], result['counts'])
+        self.write(msg, file_msg = ('Count: '+ msg))
+        
+        self.SetFlipper(flippernum, True) # turn it on
+        result = self.Count(duration)
+        on_counts = result['counts']
+        msg = 'FLIPPER %d ON:\ncount time: %.4f monitor: %g counts: %g \n' % (flippernum, result['count_time'], result['monitor'], result['counts'])
+        self.write(msg, file_msg = ('Count: '+ msg))
+        
+        if (off_counts == 0 or on_counts == 0): 
+            flipping_ratio = 0.0
+            self.write("flipping ratio = 0 or bad")
+            return 0.0
+        else:
+            flipping_ratio = float(off_counts) / on_counts
+            inverse_ratio = float(on_counts) / off_counts
+            self.write("flipping ratio: %.4f (inverse: %.4f) \n" % (flipping_ratio, inverse_ratio))
+        
+        return flipping_ratio
             
     def SetFlipperByName(self, flippernames, enable):
         id_len = len('flipper')
