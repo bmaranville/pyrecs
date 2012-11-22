@@ -1,4 +1,5 @@
 import struct, sys, serial
+DEBUG=True
 
 class NESLAB_BATH:
     """

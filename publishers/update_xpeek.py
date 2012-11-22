@@ -1,30 +1,26 @@
 import socket
-
+from publisher import Publisher
 #bcast_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #host = '129.6.121.255'
 #port = 8080
-
+from pyrecs.ordered_dict import OrderedDict
 TEST = True
 
-class XPeekPublisher:
+class XPeekPublisher(Publisher):
     """ publisher for state dictionaries coming from pyrecs InstrumentController """
     def __init__(self):
         self.broadcaster = xpeek_broadcast()
 
     def publish_start(self, state, scan_def):
+        vary_dict = OrderedDict(scan_def['vary'])
         if scan_def['comment'] == 'Find_Peak':
-            self.broadcaster.new_findpeak(scan_def['iterations'], scan_def['filename'], scan_def['vary'].keys(), scan_def['namestr'])
+            self.broadcaster.new_findpeak(scan_def['iterations'], scan_def['filename'], vary_dict.keys(), scan_def['namestr'])
         else:
-            self.broadcaster.new_data(scan_def['iterations'], scan_def['filename'], scan_def['vary'].keys(), scan_def['comment'], scan_def['namestr'])
-    
-    def publish_archive_creation(self, *args, **kwargs):
-        """ called to record the creation of the data archive
-        (needed in the MONITOR.REC file) """
-        pass
+            self.broadcaster.new_data(scan_def['iterations'], scan_def['filename'], vary_dict.keys(), scan_def['comment'], scan_def['namestr'])
     
     def publish_datapoint(self, state, scan_def):
         """ called to record a new datapoint """
-        vary = scan_def['vary'].keys()
+        vary = OrderedDict(scan_def['vary']).keys()
         position = [state[d] for d in vary]
         counts = state['result']['counts']
         pointnum = state['i'] + 1

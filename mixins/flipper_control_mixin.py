@@ -20,7 +20,8 @@ class FlipperControlMixin:
     """
     
     def __init__(self):
-        term_line = int(self.ip.InstrCfg['mag_line'])
+        #term_line = int(self.ip.InstrCfg['mag_line'])
+        term_line = 4
         if self.gpib is None:
             self.gpib = RS232GPIB(serial_port = self.ip.GetSerialPort(term_line)) # initialize our gpib controller
         num_flipper_ps = len(self.ip.GetFcal())
@@ -34,6 +35,8 @@ class FlipperControlMixin:
         self.fcal = self.SetFlipperCalibration
         self.flm = functools.partial(self.SetFlipper, 0)
         self.fla = functools.partial(self.SetFlipper, 1)
+        self.rm = functools.partial(self.GetFlippingRatio, 0)
+        self.ra = functools.partial(self.GetFlippingRatio, 0)
         self.iset = self.SetFlipperPSCurr
         self.vset = self.SetFlipperPSVolt
         self.iscan = self.IScan

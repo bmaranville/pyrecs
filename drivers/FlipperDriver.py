@@ -1,5 +1,6 @@
 import rs232gpib
 import numpy
+DEBUG=True
 
 class FlipperPS:
     """ class to control a flipper power supply.
@@ -18,12 +19,12 @@ class FlipperPS:
     def GetCurrent(self):
         self.gpib.sendCommand(self.gpib_addr, 'IOUT?')
         reply = self.gpib.receiveReply(self.gpib_addr)
-        return numpy.float32(reply)
+        return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one
         
     def SetVoltage(self, value):
         self.gpib.sendCommand(self.gpib_addr, 'VSET %.4f' % value)
         
     def GetVoltage(self):
-        self.gpib.sendCommand(self.gpib_addr, 'IOUT?')
+        self.gpib.sendCommand(self.gpib_addr, 'VOUT?')
         reply = self.gpib.receiveReply(self.gpib_addr)
-        return numpy.float32(reply)
+        return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one
