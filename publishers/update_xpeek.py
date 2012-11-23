@@ -4,7 +4,7 @@ from publisher import Publisher
 #host = '129.6.121.255'
 #port = 8080
 from pyrecs.ordered_dict import OrderedDict
-TEST = True
+TEST = False
 
 class XPeekPublisher(Publisher):
     """ publisher for state dictionaries coming from pyrecs InstrumentController """
@@ -61,9 +61,9 @@ class xpeek_broadcast:
         self.instrument_name = instrument_name
         self.pointnum = 1
          
-    def new_findpeak(self, npts, filename, vary, instrument_name = 'CG1'):
+    def new_findpeak(self, npts, filename, vary):
         outstr = ''
-        outstr += instrument_name + ':START\t'
+        outstr += self.instrument_name + ':START\t'
         outstr += 'NPTS=% 10d\t' % npts
         outstr += 'FILE=%s\t' % filename
         outstr += 'VARY='
@@ -75,12 +75,12 @@ class xpeek_broadcast:
         self.pointnum = 1
         self.broadcast(outstr)
     
-    def new_data(self, npts, filename, vary=[], comment = '', instrument_name = 'CG1'):
+    def new_data(self, npts, filename, vary=[], comment = ''):
         self.vary = vary
         self.npts = npts
         self.filename = filename
         outstr = ''
-        outstr += instrument_name + ':START\t'
+        outstr += self.instrument_name + ':START\t'
         outstr += 'NPTS=% 10d\t' % npts
         outstr += 'FILE=%s\t' % filename
         outstr += 'VARY='
@@ -94,15 +94,16 @@ class xpeek_broadcast:
         if TEST: 
             print outstr
         else:
+            print outstr
             self.bcast_sock.sendto(outstr, (self.host, self.port))
         
-    def new_point(self, position, counts, pointnum = None, vary = None, instrument_name = 'CG1'):
+    def new_point(self, position, counts, pointnum = None, vary = None):
         if pointnum is None:
             pointnum = self.pointnum
         if vary is None:
             vary = self.vary
         outstr = ''
-        outstr += instrument_name + ':\t'
+        outstr += self.instrument_name + ':\t'
         outstr += 'PT=% 10d\t' % pointnum
         for p,v in zip(position, vary):
             outstr += '%s=%11.3f ' % (str(v).upper(), p)
@@ -110,9 +111,9 @@ class xpeek_broadcast:
         self.pointnum = pointnum + 1
         self.broadcast(outstr)
         
-    def end(self, scan_type = None, fit_params = [], converged = False, instrument_name = 'CG1'):
+    def end(self, scan_type = None, fit_params = [], converged = False):
         outstr = ''
-        outstr += instrument_name + ':END\t'
+        outstr += self.instrument_name + ':END\t'
         if scan_type in ['FP', 'ISCAN']:
             outstr += 'TYPE=%s\t' % (scan_type,)
             for i, param in enumerate(fit_params):
@@ -141,14 +142,14 @@ def send_end_fp_noconverge(instrument_name = 'CG1'):
     outstr = '%s:END\tTYPE=NOCONV\n' % (instrument_name,)
     bcast_sock.sendto(outstr, (host, port))
 
-def test_xpeek_stream():
+def test_xpeek_stream(instrument_name="CGD"):
     import time
     import numpy
-    xpeek = xpeek_broadcast(instrument_name = 'CG1')
+    xpeek = xpeek_broadcast(instrument_name = instrument_name, port=50000)
     npts = 10
-    filename = 'fpx99001.cg1'
+    filename = 'fpx03001.cgd'
     comment = 'test of xpeek broadcast network'
-    vary = [99]
+    vary = ['A3',]
     xpeek.new_data(npts, filename, vary, comment = comment)
     time.sleep(1.0)
     for i in range(npts):
