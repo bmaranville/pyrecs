@@ -1,5 +1,6 @@
 import struct, sys, serial
-DEBUG=True
+import binascii
+DEBUG=False
 
 class NESLAB_BATH:
     """
@@ -14,7 +15,8 @@ class NESLAB_BATH:
     def __init__(self, port = '/dev/ttyUSB1'):
         """ the Temperature serial connection is on the second port at AND/R, which is /dev/ttyUSB1 """
         self.port = port
-        self.serial = serial.serial_for_url(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+        #self.serial = serial.serial_for_url(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+        self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
         self.read_timeout = 1.0
         self.commands = {
             'Read Acknowledge': 0x00,
@@ -31,6 +33,7 @@ class NESLAB_BATH:
         send_str = '\xca'
         send_str += cmd_string
         send_str += self._checksum(cmd_string)
+        if DEBUG: print "send str: ", binascii.b2a_hex(send_str)
         self.serial.write(send_str)
         self.serial.flush()
            
@@ -56,6 +59,7 @@ class NESLAB_BATH:
         header = self.serial.read(5)
         self.serial.flush()
         self.header = header
+        if DEBUG: print "header: ", binascii.b2a_hex(header)
         # address is the first 3 bytes, '\xCA\x00\x01'
         command_code = header[3]
         bytes_coming = struct.unpack_from('B', header[4], 0)[0]

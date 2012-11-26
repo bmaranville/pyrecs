@@ -97,13 +97,15 @@ class xpeek_broadcast:
             print outstr
             self.bcast_sock.sendto(outstr, (self.host, self.port))
         
-    def new_point(self, position, counts, pointnum = None, vary = None):
+    def new_point(self, position, counts, pointnum = None, vary = None, instrument_name=None):
         if pointnum is None:
             pointnum = self.pointnum
         if vary is None:
             vary = self.vary
+        if instrument_name=None:
+            instrument_name = self.instrument_name
         outstr = ''
-        outstr += self.instrument_name + ':\t'
+        outstr += instrument_name + ':\t'
         outstr += 'PT=% 10d\t' % pointnum
         for p,v in zip(position, vary):
             outstr += '%s=%11.3f ' % (str(v).upper(), p)
@@ -142,10 +144,10 @@ def send_end_fp_noconverge(instrument_name = 'CG1'):
     outstr = '%s:END\tTYPE=NOCONV\n' % (instrument_name,)
     bcast_sock.sendto(outstr, (host, port))
 
-def test_xpeek_stream(instrument_name="CGD"):
+def test_xpeek_stream(instrument_name="CGD", port=8080):
     import time
     import numpy
-    xpeek = xpeek_broadcast(instrument_name = instrument_name, port=50000)
+    xpeek = xpeek_broadcast(instrument_name = instrument_name, port=port)
     npts = 10
     filename = 'fpx03001.cgd'
     comment = 'test of xpeek broadcast network'
