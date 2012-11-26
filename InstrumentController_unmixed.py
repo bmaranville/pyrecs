@@ -22,6 +22,7 @@ from ordered_dict import OrderedDict
 from prefilter_ICP import prefilterICPString
 from ICPSequenceFile import PyICPSequenceFile, PyICPSequenceStringIO
 from pyrecs.icp_compat import ibuffer
+from pyrecs.icp_compat.icp_to_pyrecs_table import ICP_CONVERSION
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
 from pyrecs.publishers import update_xpeek
@@ -246,6 +247,8 @@ class InstrumentController:
         self.Count = self.PencilCount
         # command alias list: these commands will come in from the filter
         # ICP commands:
+        self.pwl = self.GetWavelength
+        self.wl = self.SetWavelength
         self.pa = self.PrintMotorPos
         self.pt = self.PrintTemperature
         self.pu = self.PrintUpperLimits
@@ -254,7 +257,7 @@ class InstrumentController:
         self.set = self.SetSoftMotorPos
         self.st = self.SetTemperature
         self.d = self.DriveMotor
-        self.di = functools.partial(self.DriveMotor, increment=True)
+        self.di = functools.partial(self.DriveMotor, relative=True)
         self.ct = self.PrintCounts
         self.mon = self.PrintMonitor
         self.w = self.setLogging
@@ -266,8 +269,8 @@ class InstrumentController:
         self.rsf = self.RunICPSequenceFile
         self.rs = self.RunSequence
         self.dp = self.DrivePeak #New!
-        self.ph = self.pr = self.sr = lambda x: None # photometer commands
         
+        self.icp_conversions = ICP_CONVERSIONS
         
         self.device_registry = {'motor': 
                                 {'names': self.motor_names, 'updater': self.DriveMotorByName },
@@ -281,6 +284,9 @@ class InstrumentController:
         #for base in self.__class__.__bases__:
         #    base.__init__(self)
   
+    def GetICPConversions(self):
+        return self.icp_conversions
+        
     def Abort(self, signum=None, frame=None):
         """ when trapped, the abort just sets a flag """
         self._aborted = True
@@ -370,6 +376,11 @@ class InstrumentController:
         
         self.putline_reverse(mesg)
             
+    def GetWavelength(self):
+        return self.ip.GetWavelength()
+        
+    def SetWavelength(self, wl):
+        self.ip.SetWavelength(wl)
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix
@@ -643,8 +654,8 @@ class InstrumentController:
         #    self._aborted = False
        
     @validate_motor
-    def DriveMotor(self, motornum, position, do_backlash = True, check_limits = True, reraise_exceptions = False, increment=False):
-        if increment:
+    def DriveMotor(self, motornum, position, relative=False, do_backlash = True, check_limits = True, reraise_exceptions = False):
+        if relative:
             position = self.GetMotorPos(motornum) + position
         self.DriveMultiMotor([motornum], [position], do_backlash, check_limits, reraise_exceptions)
     
