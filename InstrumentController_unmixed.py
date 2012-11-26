@@ -22,7 +22,7 @@ from ordered_dict import OrderedDict
 from prefilter_ICP import prefilterICPString
 from ICPSequenceFile import PyICPSequenceFile, PyICPSequenceStringIO
 from pyrecs.icp_compat import ibuffer
-from pyrecs.icp_compat.icp_to_pyrecs_table import ICP_CONVERSION
+from pyrecs.icp_compat.icp_to_pyrecs_table import ICP_CONVERSIONS
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
 from pyrecs.publishers import update_xpeek
@@ -247,6 +247,7 @@ class InstrumentController:
         self.Count = self.PencilCount
         # command alias list: these commands will come in from the filter
         # ICP commands:
+        
         self.pwl = self.GetWavelength
         self.wl = self.SetWavelength
         self.pa = self.PrintMotorPos
@@ -262,13 +263,14 @@ class InstrumentController:
         self.mon = self.PrintMonitor
         self.w = self.setLogging
         self.fp = self.FindPeak
-        self.fpt = self.FindPeakT
+        self.fpt = self.FindPeakTied
         self.l = self.SetLowerLimit
         self.u = self.SetUpperLimit
         self.ri = self.RunIBuffer
         self.rsf = self.RunICPSequenceFile
         self.rs = self.RunSequence
         self.dp = self.DrivePeak #New!
+        
         
         self.icp_conversions = ICP_CONVERSIONS
         
@@ -657,7 +659,17 @@ class InstrumentController:
     def DriveMotor(self, motornum, position, relative=False, do_backlash = True, check_limits = True, reraise_exceptions = False):
         if relative:
             position = self.GetMotorPos(motornum) + position
-        self.DriveMultiMotor([motornum], [position], do_backlash, check_limits, reraise_exceptions)
+        motors_to_move = [motornum,]
+        destinations = [position,]
+        self.DriveMultiMotor(motors_to_move, destinations, do_backlash, check_limits, reraise_exceptions)
+    
+    def DriveMotorIncrement(self, motornum, position, do_backlash = True, check_limits = True, reraise_exceptions = False):
+        self.DriveMotor(motornum, position, relative=True, do_backlash=do_backlash, check_limits=check_limits, reraise_exceptions=reraise_exceptions)
+    
+    def DriveMotorTied(self, motornum, position, relative=False, do_backlash = True, check_limits = True, reraise_exceptions = False):
+        motors_to_move = [motornum, motornum-1]
+        destinations = [position, position/2.0]
+        self.DriveMultiMotor(motors_to_move, destinations, do_backlash, check_limits, reraise_exceptions)
     
     def DriveMotorByName(self, motors_to_move, position_list, do_backlash = True, check_limits = True, reraise_exceptions = False):
         motor_list = [self.motor_lookup[s] for s in motors_to_move]
@@ -1303,7 +1315,7 @@ class InstrumentController:
         self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
         
     @validate_motor    
-    def FindPeakT(self, motnum, mrange, mstep, duration=-1, auto_drive_fit = False, t_movable=None):
+    def FindPeakTied(self, motnum, mrange, mstep, duration=-1, auto_drive_fit = False, t_movable=None):
         """the classic ICP function (fpt)
         It can be suspended with ctrl-z (ctrl-z again to resume)
         or the 'finishup' routine skips the rest of the points and fits now (ctrl-\)

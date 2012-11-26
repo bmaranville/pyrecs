@@ -8,10 +8,6 @@ import socket
 import threading
 import sys, os
 import time
-import sys
-import functools # for the decorator
-import inspect
-
 
 PYRECS_SERVER_ADDR = 'http://' + socket.getfqdn()
 #PYRECS_SERVER_ADDR = "http://andr.ncnr.nist.gov"
@@ -89,7 +85,7 @@ def UDP_Printserver():
     UDPSock.close()
 
 
-prefilter_ICP.activate_prefilter(None, log_unfiltered = False) # no callbacks in this client
+#prefilter_ICP.activate_prefilter(None, log_unfiltered = False) # no callbacks in this client
 # make connections to the server
 #try: 
 if DEBUG: print "starting signaling connection"
@@ -97,6 +93,8 @@ icsig = xmlrpclib.ServerProxy('%s:%d' % (PYRECS_SERVER_ADDR, PYRECS_SIGNAL_PORT)
 if DEBUG: print "starting command connection"
 ic = xmlrpclib.ServerProxy('%s:%d' % (PYRECS_SERVER_ADDR, PYRECS_CONTROL_PORT))
 if DEBUG: print "connected!"
+
+icp_conversions = ic.GetICPConversions()
     
 try:
     if DEBUG: print "opening reverse connection"
@@ -156,6 +154,8 @@ if os.name.lower() == 'posix':
 #restart the connection with protected communication threads
 icsig = xmlrpclib.ServerProxy('%s:%d' % (PYRECS_SERVER_ADDR, PYRECS_SIGNAL_PORT), transport = threadedTransport())
 ic = xmlrpclib.ServerProxy('%s:%d' % (PYRECS_SERVER_ADDR, PYRECS_CONTROL_PORT), transport = threadedTransport())
+
+if DEBUG: print "connections restarted."
 
 ####################################################################################################################
 
@@ -308,20 +308,26 @@ def register_prefilter_commands(icp_conversion_table):
     for cmd in icp_conversion_table['arg_commands']:
         entry = icp_conversion_table['arg_commands'][cmd]
         prefilter_ICP.icpt.arg_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
+    if DEBUG: print "arg_commands registered"
     for cmd in icp_conversion_table['en_dis_commands']:
         entry = icp_conversion_table['en_dis_commands'][cmd]
         prefilter_ICP.icpt.en_dis_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
+    if DEBUG: print "enable/disable commands registered"
     for cmd in icp_conversion_table['increment_commands']:
         entry = icp_conversion_table['increment_commands'][cmd]
         prefilter_ICP.icpt.increment_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
+    if DEBUG: print "increment commands registered"
     for cmd in icp_conversion_table['tied_commands']:
         entry = icp_conversion_table['tied_commands'][cmd]
         prefilter_ICP.icpt.tied_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
-
+    if DEBUG: print "tied commands registered"
+    
 def get_cmds():
-    icp_conversion = ic.GetICPConversion()
-    register_prefilter_commands(icp_conversion)
+    #icp_conversions = ic.GetICPConversions()
+    if DEBUG: print "icp_conversions: ", icp_conversions
+    register_prefilter_commands(icp_conversions)
 
+if DEBUG: print "ready to roll..."
 get_cmds()
 prefilter_ICP.activate_prefilter(None, log_unfiltered = False) # no callbacks in this client
 

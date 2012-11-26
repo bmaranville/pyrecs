@@ -102,7 +102,7 @@ class xpeek_broadcast:
             pointnum = self.pointnum
         if vary is None:
             vary = self.vary
-        if instrument_name=None:
+        if instrument_name == None:
             instrument_name = self.instrument_name
         outstr = ''
         outstr += instrument_name + ':\t'

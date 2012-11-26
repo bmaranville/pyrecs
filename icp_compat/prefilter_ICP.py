@@ -283,7 +283,7 @@ class ICPEnableDisableCommands(ICPCommandList):
 class ICPIncrementCommands(ICPCommandList):
     """ commands that increment the value of a device - always 2 arguments:
     motornum and delta """
-    extra_args = 'relative=True'
+    extra_args = ''
     
     def recompile_commands(self):
         self.commands_compiled = []
@@ -295,7 +295,7 @@ class ICPIncrementCommands(ICPCommandList):
                 
 class ICPTiedCommands(ICPCommandList):
     """ commands that tie two motors, usually 3 and 4 """
-    extra_args = 't_scan=True'
+    extra_args = ''
     
     def recompile_commands(self):
         self.commands_compiled = []

@@ -1,5 +1,5 @@
 ICP_CONVERSIONS = {
-    arg_commands: {
+    'arg_commands': {
         'pwl': { 'numargs': [0], 'pyrecs_cmd': 'GetWavelength' },
         'wl': { 'numargs': [1], 'pyrecs_cmd': 'SetWavelength' },
         'pa': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintMotorPos' },
@@ -23,17 +23,17 @@ ICP_CONVERSIONS = {
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotor'}
     },
         
-    en_dis_commands: {
+    'en_dis_commands': {
         'w': { 'numargs': [1], 'pyrecs_cmd': 'setLogging'},
         'p': { 'numargs': [1], 'pyrecs_cmd': 'setPolarization'}
     },
 
-    increment_commands: {
-        'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotor'}
+    'increment_commands': {
+        'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotorIncrement'}
     },
 
-    tied_commands: {
-        'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotor'},
-        'fp': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeak'}
+    'tied_commands': {
+        'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotorTied'},
+        'fp': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeakTied'}
     },
 }
