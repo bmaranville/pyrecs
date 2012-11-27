@@ -25,6 +25,7 @@ from pyrecs.icp_compat import ibuffer
 from pyrecs.icp_compat.icp_to_pyrecs_table import ICP_CONVERSIONS
 from InstrumentParameters import InstrumentParameters
 from pyrecs.drivers.VME import VME
+import pyrecs.drivers
 from pyrecs.publishers import update_xpeek
 from pyrecs.publishers import ICPDataFile, publisher
 from pyrecs.publishers.gnuplot_publisher import GnuplotPublisher
@@ -205,7 +206,7 @@ class InstrumentController:
         self.datafolder = datafolder # where data will be stored
         os.chdir(self.datafolder)
         #### Now, for the optional modules:
-        self._tc = [] # temperature controller(s)
+        self._tc = {} # temperature controller(s)
         self._magnet = [] # magnet power supply(s)
         #self.fixed_motors = set() # none start out fixed
         self.gpib = None
@@ -277,7 +278,9 @@ class InstrumentController:
         self.device_registry = {'motor': 
                                 {'names': self.motor_names, 'updater': self.DriveMotorByName },
                                 'scaler':
-                                {'names': ['scaler'], 'updater': self.scaler }}
+                                {'names': ['scaler'], 'updater': self.scaler },
+                                'temperature':
+                                {'names': self._tc.keys(), 'updater': self.SetTemperature} }
         
         self.state = {}
         self.getState()
@@ -383,6 +386,45 @@ class InstrumentController:
         
     def SetWavelength(self, wl):
         self.ip.SetWavelength(wl)
+    
+    def TDevClient(self, *args):
+        self.write('This command must be run from the server, not the client.\nPlease run ic.tdev() in the server window\n')
+        
+    def TemperatureDevice(self, devicename=None, driver=None, control_sensor=None, sample_sensor=None, record=None, remove=False):
+        if devicename=None:
+            if len(self._tc.keys()) > 0: # there are temperature controllers defined
+                print "Defined temperature controllers:"
+                for dev_id in self._tc:
+                    tc = self._tc[dev_id] 
+                    settings = tc.GetSettings()
+                    print "%s: driver=%s, control_sensor=%s, sample_sensor=%s, record=%s" % (str(dev_id), settings['control_sensor'], settings['sample_sensor'], settings['record'])
+                print "to remove e.g. device 1, type ic.tdev(1, remove=True)"
+            
+            print "to add a device, just specify a new id, ic.tdev(1) or ic.tdev('Lakeshore')..."
+            print "to reconfigure a device, specify an existing id"
+            print "\nnote that only the lowest (numeric or alphabetic) device"
+            print "will be controlled during an IBUFFER scan" 
+        else: 
+            if remove == True: 
+                if not devicename in self._tc:
+                    print "not a valid device"
+                    return
+                else:
+                    _ = self._tc.pop(devicename)
+                    self.device_registry['temperature']['names'] = self._tc.keys()
+            else: # we're adding or reconfiguring a device
+                if driver is None:
+                    tdevices = pyrecs.drivers.temperature_controllers
+                    print "Choose a driver for device %s:" % (str(devicename))
+                    for i, td in enumerate(tdevices):
+                        print "%d: %s" % (i, td)
+                    valid_choice = False
+                    while not valid_choice:
+                        reply = raw_input("Enter choice:")
+                        valid_choice = (int(reply)>=0 and int(reply)<len(tdevices))
+                        if not valid_choice: print "invalid choice"
+
+                    
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix

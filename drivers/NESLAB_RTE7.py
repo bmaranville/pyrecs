@@ -2,7 +2,9 @@ import struct, sys, serial
 import binascii
 DEBUG=False
 
-class NESLAB_BATH:
+from temperature_controller import TemperatureController
+
+class NESLAB_BATH(TemperatureController):
     """
     driver for NESLAB RTE 7 bath used often at ANDR/MAGIK
     commands available:
@@ -12,7 +14,7 @@ class NESLAB_BATH:
         SetTemp(temperature in deg. C)
         MakeLocal()
     """
-    def __init__(self, port = '/dev/ttyUSB1'):
+    def __init__(self, port = '/dev/ttyUSB2'):
         """ the Temperature serial connection is on the second port at AND/R, which is /dev/ttyUSB1 """
         self.port = port
         #self.serial = serial.serial_for_url(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
