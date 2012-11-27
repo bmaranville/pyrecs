@@ -425,7 +425,7 @@ class InstrumentController:
                         reply = raw_input("Enter choice:")
                         valid_choice = (int(reply)>=0 and int(reply)<len(tdevices))
                         if not valid_choice: print "invalid choice"
-                        tdevice = choices[reply]    
+                        tdevice = choices[int(reply)]    
                     self._tc[devicename] = __import__(tdevices[tdevice][0], tdevices[tdevice][1])
                     self.device_registry['temperature']['names'] = self._tc.keys()
 
