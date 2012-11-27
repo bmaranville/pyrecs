@@ -416,13 +416,18 @@ class InstrumentController:
                 if driver is None:
                     tdevices = pyrecs.drivers.temperature_controllers
                     print "Choose a driver for device %s:" % (str(devicename))
+                    choices = {}
                     for i, td in enumerate(tdevices):
                         print "%d: %s" % (i, td)
+                        choices[i] = td
                     valid_choice = False
                     while not valid_choice:
                         reply = raw_input("Enter choice:")
                         valid_choice = (int(reply)>=0 and int(reply)<len(tdevices))
                         if not valid_choice: print "invalid choice"
+                        tdevice = choices[reply]    
+                    self._tc[devicename] = __import__(tdevices[tdevice][0], tdevices[tdevice][1])
+                    self.device_registry['temperature']['names'] = self._tc.keys()
 
                     
     
