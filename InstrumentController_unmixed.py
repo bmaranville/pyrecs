@@ -391,7 +391,7 @@ class InstrumentController:
         self.write('This command must be run from the server, not the client.\nPlease run ic.tdev() in the server window\n')
         
     def TemperatureDevice(self, devicename=None, driver=None, control_sensor=None, sample_sensor=None, record=None, remove=False):
-        if devicename=None:
+        if devicename is None:
             if len(self._tc.keys()) > 0: # there are temperature controllers defined
                 print "Defined temperature controllers:"
                 for dev_id in self._tc:
