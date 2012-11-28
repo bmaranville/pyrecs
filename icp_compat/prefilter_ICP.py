@@ -203,7 +203,7 @@ class ICPCommandList(object):
     # some class variables (constants)
     FP_REGEXP = r'([-+]?[0-9]*\.?[0-9]+)'
     INT_REGEXP = r'([0-9]+)'
-    SEP = r'[ \t]*[,=][ \t]*'
+    SEP = r'[ \t]*[ ,=][ \t]*'
     END = r'[ \t]*$'
     extra_args = ''
     

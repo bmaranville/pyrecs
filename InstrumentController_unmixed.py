@@ -206,7 +206,7 @@ class InstrumentController:
         self.datafolder = datafolder # where data will be stored
         os.chdir(self.datafolder)
         #### Now, for the optional modules:
-        self._tc = {} # temperature controller(s)
+        self._tc = [] # temperature controller(s)
         self._magnet = [] # magnet power supply(s)
         #self.fixed_motors = set() # none start out fixed
         self.gpib = None
@@ -280,7 +280,7 @@ class InstrumentController:
                                 'scaler':
                                 {'names': ['scaler'], 'updater': self.scaler },
                                 'temperature':
-                                {'names': self._tc.keys(), 'updater': self.SetTemperature} }
+                                {'names': [], 'updater': self.SetTemperature} }
         
         self.state = {}
         self.getState()
@@ -390,94 +390,80 @@ class InstrumentController:
     def TDevClient(self, *args):
         self.write('This command must be run from the server, not the client.\nPlease run ic.tdev() in the server window\n')
     
-    def RemoveTemperatureDevice(self, devicename):
-        if not devicename in self._tc:
-            print "not a valid device"
+    def RemoveTemperatureDevice(self, device_num=None):
+        if device_num is None:
+            self.write('enter \'rtdev i\' to remove temperature controller \'i\'\n')
+            self.write('(valid i values are between 1 and %d)\n' % (int(device_num), len(self._tc)))
+        if device_num<1 or device_num>len(self._tc):
+            self.write('%d is Not a valid temperature device (valid values are between 1 and %d)\n' % (int(device_num), len(self._tc)))
             return
         else:
-            _ = self._tc.pop(devicename) # remove the key
-            self.device_registry['temperature']['names'] = self._tc.keys()
+            _ = self._tc.pop(device_num-1) # remove the key
+            self.device_registry['temperature']['names'] = ['t%d' % (i+1) for i in range(len(self._tc))]
             
     def NewTemperatureDevice(self, driver_num=None, port=None, **kwargs):
         tdevices = pyrecs.drivers.temperature_controllers
         #print "Choose a driver for device %s:" % (str(devicename))
         if driver_num is None:
-            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'tdev new 1\')\n' % (len(tdevices),))
+            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'atdev 1\')\n' % (len(tdevices),))
             for i, td in enumerate(tdevices):
                 self.write("%d: %s\n" % (i+1, td[0])) # label
             return         
         elif (int(driver_num) < 1 or int(driver_num)>len(tdevices)):
             self.write('invalid driver.\n')
-            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'tdev new 1\')\n' % (len(tdevices),))
+            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'atdev 1\')\n' % (len(tdevices),))
             for i, td in enumerate(tdevices):
                 self.write("%d: %s\n" % (i+1, td[0])) # label
             return
         selection = tdevices[int(driver_num)-1]    
-        driver = __import__('pyrecs.drivers.'+selection[1], selection[2])
+        #driver = __import__('pyrecs.drivers.'+selection[1], fromlist=selection[2])
         if len(self._tc) == 0:
             if port is None:
                 # then use the default port
-                port = self.ip.GetSerialPort(self.ip.InstrCfg['tmp_line'])
+                port = self.ip.GetSerialPort(int(self.ip.InstrCfg['tmp_line']))
+            else: 
+                port = self.ip.GetSerialPort(int(port))
         else: # we already have a defined tc, adding another
             if port is None:
                 self.write('Must specify a port for any additional (>1) temperature controllers, as\n')
-                self.write('\'tdev new [driver number] [port]\', e.g. \'tdev new 1 /dev/ttyUSB4\',\n which corresponds to port 5 on the multiport adapter\n')  
+                self.write('\'atdev [driver number] [port]\', e.g. \'atdev 1 5\',\n which corresponds to /dev/ttyUSB4 on the multiport adapter\n')  
                 return
-        driver = __import__('pyrecs.drivers.'+selection[1], selection[2])
+            else:
+                port = self.ip.GetSerialPort(int(port))
+        driver_module = __import__('pyrecs.drivers.'+selection[1], fromlist=['not_empty'])
+        driver = getattr(driver_module, selection[2])
         new_tempcontroller = driver(port, **kwargs)
-        self._tc.append= new_tempcontroller
-        settings = new_tempcontroller.GetSettings()
+        self._tc.append(new_tempcontroller)
+        dev_id = len(self._tc)
+        settings = new_tempcontroller.getSettings()
+        #settings_str = pprint.pformat(settings)
+        settings_str = str(settings)
         self.write('device added: \n')
-        self.write("%s: driver=%s, control_sensor=%s, sample_sensor=%s, record=%s\n" % (str(dev_id), selection[0], settings['control_sensor'], settings['sample_sensor'], settings['record'])
-        self.write('\nTo change settings for this driver, type e.g. \'tdev %s sample_sensor A\' or \'tdev %s record both\'' % ( 
+        self.write("%d: driver=%s, settings=%s" % (dev_id, selection[0], settings_str))
+        self.write('\nTo change settings for this driver, type e.g. \'tdev %d sample_sensor A\'\n' % (dev_id,))
         self.device_registry['temperature']['names'] = ['t%d' % (i+1) for i in range(len(self._tc))]
     
-    def ConfigureTemperatureDevice(self, device_num, keyword, value):
+    def ConfigureTemperatureDevice(self, device_num, keyword=None, value=None):
         if (int(device_num) < 1 or int(device_num) > len(self._tc)):
             self.write('%d is Not a valid temperature device (valid values are between 1 and %d)\n' % (int(device_num), len(self._tc)))
             return
-        return self._tc[int(device_num) -1].configure(keyword, value)
+        self.write(self._tc[int(device_num) -1].configure(keyword, value))
         
-    def TemperatureDevice(self, devicename=None, driver=None, control_sensor=None, sample_sensor=None, record=None, remove=False):
-        if devicename is None:
-            if len(self._tc.keys()) > 0: # there are temperature controllers defined
+    def TemperatureDevice(self, device_num=None, keyword=None, value=None):
+        if device_num is None:
+            if len(self._tc) > 0: # there are temperature controllers defined
                 print "Defined temperature controllers:"
-                for dev_id in self._tc:
-                    tc = self._tc[dev_id] 
-                    settings = tc.GetSettings()
-                    print "%s: driver=%s, control_sensor=%s, sample_sensor=%s, record=%s" % (str(dev_id), settings['control_sensor'], settings['sample_sensor'], settings['record'])
-                print "to remove e.g. device 1, type ic.tdev(1, remove=True)"
-            
-            print "to add a device, just specify a new id, ic.tdev(1) or ic.tdev('Lakeshore')..."
-            print "to reconfigure a device, specify an existing id"
-            print "\nnote that only the lowest (numeric or alphabetic) device"
-            print "will be controlled during an IBUFFER scan" 
-        else: 
-            if remove == True: 
-                if not devicename in self._tc:
-                    print "not a valid device"
-                    return
-                else:
-                    _ = self._tc.pop(devicename)
-                    self.device_registry['temperature']['names'] = self._tc.keys()
-            else: # we're adding or reconfiguring a device
-                if driver is None:
-                    tdevices = pyrecs.drivers.temperature_controllers
-                    print "Choose a driver for device %s:" % (str(devicename))
-                    choices = {}
-                    for i, td in enumerate(tdevices):
-                        print "%d: %s" % (i, td)
-                        choices[i] = td
-                    valid_choice = False
-                    while not valid_choice:
-                        reply = raw_input("Enter choice:")
-                        valid_choice = (int(reply)>=0 and int(reply)<len(tdevices))
-                        if not valid_choice: print "invalid choice"
-                        tdevice = choices[int(reply)]    
-                    self._tc[devicename] = __import__('pyrecs.drivers.'+tdevices[tdevice][0], tdevices[tdevice][1])
-                    self.device_registry['temperature']['names'] = self._tc.keys()
-
-                    
+                for i, tc in enumerate(self._tc):
+                    settings = tc.getSettings()
+                    settings_str = pprint.pformat(settings)
+                    self.write("%d: driver=%s, settings=\n  %s\n" % (i+1, tc.label, settings_str))
+                    self.write('To remove, type \'rtdev %d\'\n' % (i+1))
+                self.write('To change settings, type e.g. \'tdev %d sample_sensor A\'\n' % (i+1,))
+            else: 
+                self.write('No defined temperature controllers.\n')
+            self.write('To add a new (additional) temperature controller: \'atdev\'\n')
+        else: # we're adding or reconfiguring a device
+            self.ConfigureTemperatureDevice(device_num, keyword, value)
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix
@@ -511,7 +497,7 @@ class InstrumentController:
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
         self.state.setdefault('magnet_defined', (len(self._magnet) > 0))
-        self.state.setdefault('temp_controller_defined', (len(self._tc) > 0))
+        self.state['temp_controller_defined'] = len(self._tc) > 0
         self.state['timestamp'] = time.time()
         return self.state.copy()
     
@@ -1141,13 +1127,13 @@ class InstrumentController:
             self.write( " Error: No temperature controller defined ")
         else:
             for i, tc in enumerate(self._tc):
-                self.write('temp controller %d: setpoint = %.4f, tnow = %4f' % (i+1, tc.getSetpoint(), tc.getTemperature()))           
+                self.write('temp controller %d: setpoint = %.4f, tnow = %.4f' % (i+1, tc.getSetpoint(), tc.getTemp()))           
     
     def SetTemperature(self, temperature):
         if self._tc == []:
             self.write(" Error: no temperature controller defined ")
         else: 
-            self._tc[0].SetTemperature(temperature)
+            self._tc[0].setTemp(temperature)
             
         
     def PrintLowerLimits(self):

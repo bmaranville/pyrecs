@@ -6,13 +6,30 @@ from temperature_controller import TemperatureController
 
 class Lakeshore340(TemperatureController):
     """ driver for serial connection to Lakeshore 340 Temperature Controller """
+    label = 'Lakeshore 331/340'
     def __init__(self, port = '/dev/ttyUSB2'):
-        self.port = port
-        self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+        TemperatureController.__init__(self, port)
+        """ the Temperature serial connection is on the third port at MAGIK, which is /dev/ttyUSB2 """
         self.setpoint = 0.0
-        self.sample_sensor = sample_sensor
-        self.control_sensor = control_sensor
-        self.SetControlLoop(control_sensor)
+        self.settings = {
+            'sample_sensor': 'A',
+            'control_sensor': 'A',
+            'record': 'both'
+            'units': 1,
+            }
+        sensors = {'A': "Sensor A", 'B':"Sensor B"}
+        self.valid_settings = {
+            'sample_sensor': sensors,
+            'control_sensor': sensors,
+            'record': {'setpoint':"Control setpoint", 'all':"Record all 3"}.update(sensors),
+            'units': {1: "Kelvin", 2: "Celsius", 3: "Sensor units"}
+            }
+        self.SetControlLoop(self.settings['control_sensor'])
+    
+    def updateSettings(self, keyword, value):
+        self.settings[keyword] = value
+        if keyword == 'control_sensor' or keyword == 'units':
+            self.SetControlLoop()
     
     def sendCommand(self, command = None, reply_expected = False):
         if not command:
@@ -30,33 +47,35 @@ class Lakeshore340(TemperatureController):
         reply = self.serial.readline(eol='\r')
         return reply
         
-    def SetControlLoop(self, control_sensor = "A", units = 1, on_off = 1):
+    def setControlLoop(self, on_off = 1):
     	""" initializes loop 1 of temp controller, with correct control sensor etc. """
     	# units[1] = Kelvin
     	# units[2] = Celsius
     	# units[3] = Sensor units
-    	self.sendCommand('CSET 1, %s, %d, %d' % (control_sensor, units, on_off))
+    	settings = self.settings
+    	self.sendCommand('CSET 1, %s, %d, %d' % (settings['control_sensor'], settings['units'], on_off))
         
-    def SetTemp(self, new_setpoint):
+    def setTemp(self, new_setpoint):
+        
         """ send a new temperature setpoint to the temperature controller """
         self.sendCommand('SETP 1,%7.3' % new_setpoint, reply_expected = False)
         return
         
-    def GetTemp(self, sensor = None):
-        if sensor is None: sensor = self.sample_sensor
+    def getTemp(self, sensor = None):
+        if sensor is None: sensor = self.settings['sample_sensor']
         """ retrieve the temperature of the sample thermometer """
         reply_str = self.sendCommand('KRDG? %s' % sensor, reply_expected = True)
         temperature  = float(reply_str)
         return temperature
         
-    def GetAuxTemp(self):
+    def getAuxTemp(self):
         return self.GetControlTemp()
         
-    def GetSampleTemp(self):
+    def getSampleTemp(self):
         """ retrieve the temperature of the sample thermometer """
         return self.GetTemperature(sensor = self.sample_sensor)
         
-    def GetControlTemp(self):
+    def getControlTemp(self):
         """ retrieve the temperature of the control thermometer """
         return self.GetTemperature(sensor = self.control_sensor)
 

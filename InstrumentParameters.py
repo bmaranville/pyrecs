@@ -45,7 +45,10 @@ class InstrumentParameters:
                 self.rs232[int(data[0])] = {'port':data[1], 'baud':data[2], 'stop':data[3], 'parity':data[4]}
                 
     def GetSerialPort(self, entry_num):
-        return self.rs232[entry_num]['port']
+        if entry_num < len(self.rs232):
+            return self.rs232[entry_num]['port']
+        else: # extending past ICP configuration
+            return '/dev/ttyUSB%d' % (entry_num-1,)
         
     def loadInstrCfg(self):
         self.InstrCfg = {}

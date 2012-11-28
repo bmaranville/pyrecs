@@ -14,12 +14,21 @@ class NESLAB_BATH(TemperatureController):
         SetTemp(temperature in deg. C)
         MakeLocal()
     """
+    label = 'Neslab RTE7'
     def __init__(self, port = '/dev/ttyUSB2'):
+        TemperatureController.__init__(self, port)
         """ the Temperature serial connection is on the second port at AND/R, which is /dev/ttyUSB1 """
-        self.port = port
-        #self.serial = serial.serial_for_url(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
-        self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
-        self.read_timeout = 1.0
+        self.settings = {
+            'sample_sensor': 'I',
+            'control_sensor': 'I',
+            'record': 'all'
+            }
+        sensors = {'I': "Internal", 'X':"External"}
+        self.valid_settings = {
+            'sample_sensor': sensors,
+            'control_sensor': sensors,
+            'record': {'setpoint':"Control setpoint", 'all':"Record all 3"}.update(sensors)
+            }
         self.commands = {
             'Read Acknowledge': 0x00,
             'Read Status': 0x09,
@@ -74,13 +83,13 @@ class NESLAB_BATH(TemperatureController):
         else:
             return reply
     
-    def GetTemp(self):
+    def getTemp(self):
         cmd_string = '\x00\x01\x20\x00'
         self._send_command(cmd_string)
         temperature = self._get_temp_response()
         return temperature
     
-    def SetTemp(self, temp):
+    def setTemp(self, temp):
         mult = 0.1
         t_sent = struct.pack('>h', int(temp/mult))
         cmd_str = '\x00\x01\xF0\x02' + t_sent
@@ -88,19 +97,19 @@ class NESLAB_BATH(TemperatureController):
         temperature = self._get_temp_response()
         return temperature
         
-    def GetSetpoint(self):
+    def getSetpoint(self):
         cmd_string = '\x00\x01\x70\x00'
         self._send_command(cmd_string)
         temperature = self._get_temp_response()
         return temperature
     
-    def GetAuxTemp(self):
+    def getAuxTemp(self):
         cmd_string = '\x00\x01\x21\x00'
         self._send_command(cmd_string)
         temperature = self._get_temp_response()
         return temperature
         
-    def MakeLocal(self):
+    def makeLocal(self):
         cmd_string = '\x00\x01\x81\x08\x02\x02\x02\x02\x02\x02\x02\x00'
         self._send_command(cmd_string)
         self._get_response()

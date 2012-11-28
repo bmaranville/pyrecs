@@ -21,7 +21,9 @@ ICP_CONVERSIONS = {
         'rs': { 'numargs': [1], 'pyrecs_cmd': 'RunSequence'},
         'dp': { 'numargs': [0], 'pyrecs_cmd': 'DrivePeak'},
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotor'},
-        'tdev': { 'numargs': [0,1,2,3,4], 'pyrecs_cmd': 'TDevClient'}
+        'tdev': { 'numargs': [0,1,2], 'pyrecs_cmd': 'TemperatureDevice'},
+        'atdev': { 'numargs': [0,1,2], 'pyrecs_cmd': 'NewTemperatureDevice'},
+        'rtdev': { 'numargs': [0,1], 'pyrecs_cmd': 'RemoveTemperatureDevice'}
     },
         
     'en_dis_commands': {
