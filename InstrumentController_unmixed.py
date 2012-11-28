@@ -389,6 +389,54 @@ class InstrumentController:
     
     def TDevClient(self, *args):
         self.write('This command must be run from the server, not the client.\nPlease run ic.tdev() in the server window\n')
+    
+    def RemoveTemperatureDevice(self, devicename):
+        if not devicename in self._tc:
+            print "not a valid device"
+            return
+        else:
+            _ = self._tc.pop(devicename) # remove the key
+            self.device_registry['temperature']['names'] = self._tc.keys()
+            
+    def NewTemperatureDevice(self, driver_num=None, port=None, **kwargs):
+        tdevices = pyrecs.drivers.temperature_controllers
+        #print "Choose a driver for device %s:" % (str(devicename))
+        if driver_num is None:
+            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'tdev new 1\')\n' % (len(tdevices),))
+            for i, td in enumerate(tdevices):
+                self.write("%d: %s\n" % (i+1, td[0])) # label
+            return         
+        elif (int(driver_num) < 1 or int(driver_num)>len(tdevices)):
+            self.write('invalid driver.\n')
+            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'tdev new 1\')\n' % (len(tdevices),))
+            for i, td in enumerate(tdevices):
+                self.write("%d: %s\n" % (i+1, td[0])) # label
+            return
+        selection = tdevices[int(driver_num)-1]    
+        driver = __import__('pyrecs.drivers.'+selection[1], selection[2])
+        if len(self._tc) == 0:
+            if port is None:
+                # then use the default port
+                port = self.ip.GetSerialPort(self.ip.InstrCfg['tmp_line'])
+        else: # we already have a defined tc, adding another
+            if port is None:
+                self.write('Must specify a port for any additional (>1) temperature controllers, as\n')
+                self.write('\'tdev new [driver number] [port]\', e.g. \'tdev new 1 /dev/ttyUSB4\',\n which corresponds to port 5 on the multiport adapter\n')  
+                return
+        driver = __import__('pyrecs.drivers.'+selection[1], selection[2])
+        new_tempcontroller = driver(port, **kwargs)
+        self._tc.append= new_tempcontroller
+        settings = new_tempcontroller.GetSettings()
+        self.write('device added: \n')
+        self.write("%s: driver=%s, control_sensor=%s, sample_sensor=%s, record=%s\n" % (str(dev_id), selection[0], settings['control_sensor'], settings['sample_sensor'], settings['record'])
+        self.write('\nTo change settings for this driver, type e.g. \'tdev %s sample_sensor A\' or \'tdev %s record both\'' % ( 
+        self.device_registry['temperature']['names'] = ['t%d' % (i+1) for i in range(len(self._tc))]
+    
+    def ConfigureTemperatureDevice(self, device_num, keyword, value):
+        if (int(device_num) < 1 or int(device_num) > len(self._tc)):
+            self.write('%d is Not a valid temperature device (valid values are between 1 and %d)\n' % (int(device_num), len(self._tc)))
+            return
+        return self._tc[int(device_num) -1].configure(keyword, value)
         
     def TemperatureDevice(self, devicename=None, driver=None, control_sensor=None, sample_sensor=None, record=None, remove=False):
         if devicename is None:
@@ -426,7 +474,7 @@ class InstrumentController:
                         valid_choice = (int(reply)>=0 and int(reply)<len(tdevices))
                         if not valid_choice: print "invalid choice"
                         tdevice = choices[int(reply)]    
-                    self._tc[devicename] = __import__(tdevices[tdevice][0], tdevices[tdevice][1])
+                    self._tc[devicename] = __import__('pyrecs.drivers.'+tdevices[tdevice][0], tdevices[tdevice][1])
                     self.device_registry['temperature']['names'] = self._tc.keys()
 
                     
