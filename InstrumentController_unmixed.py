@@ -1479,6 +1479,7 @@ class InstrumentController:
         """ convert an IBUFFER scan into the pyrecs scan format:
         if polarization is defined, will return multiple scans
         to be run in parallel """
+        state = self.getState()
         ibuffer_obj = ibuffer.IBUFFER(project_path = state['project_path'])
         # loads buffers from default file location
         if (bufnum <= 0) or (bufnum > len(ibuffer_obj.buffers)):
@@ -1498,11 +1499,20 @@ class InstrumentController:
             motstart = ibuf.data['a%dstart' % motnum]
             motstep = ibuf.data['a%dstep' % motnum]
             motname = 'a%d' % motnum
-            init_state.append((motname, '%f' % motstart))
             if motstep > FLOAT_ERROR: # floating-point errors!
                 scan_expr.append((motname, '%f + (i * %f)' % (motstart, motstep)))
-        scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
-        scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
+            else:
+                init_state.append((motname, '%f' % motstart))
+                
+        if ibuf.data['IncT'] > FLOAT_ERROR:
+            scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
+        else: 
+            init_state.append(('t0', ibuf.data['T0']))
+            
+        if ibuf.data['Hinc'] > FLOAT_ERROR:
+            scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
+        else:
+            init_state.append(('h0', ibuf.data['H0']))
             
         scan_definition = {'namestr': self.ip.GetNameStr(), 
                            'comment': ibuf.data['description'],
@@ -1537,7 +1547,7 @@ class InstrumentController:
             new_scan_def = scan_definition.copy()
             new_scan_def['filename'] = self.getNextFilename(file_seedname, generic_suffix)
             scan_defs.append(new_scan_def)
-    return scan_defs
+        return scan_defs
         
     def RunIBuffer(self, bufnum):
         """ Execute the scan defined in the IBUFFER with number bufnum """
