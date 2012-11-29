@@ -13,18 +13,18 @@ class FlipperPS:
             self.gpib = gpib_controller
         self.gpib_addr = gpib_addr
         
-    def SetCurrent(self, value):
+    def setCurrent(self, value):
         self.gpib.sendCommand(self.gpib_addr, 'ISET %.4f' % value)
         
-    def GetCurrent(self):
+    def getCurrent(self):
         self.gpib.sendCommand(self.gpib_addr, 'IOUT?')
         reply = self.gpib.receiveReply(self.gpib_addr)
         return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one
         
-    def SetVoltage(self, value):
+    def setVoltage(self, value):
         self.gpib.sendCommand(self.gpib_addr, 'VSET %.4f' % value)
         
-    def GetVoltage(self):
+    def getVoltage(self):
         self.gpib.sendCommand(self.gpib_addr, 'VOUT?')
         reply = self.gpib.receiveReply(self.gpib_addr)
         return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one

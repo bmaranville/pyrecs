@@ -439,7 +439,7 @@ class InstrumentController:
         #settings_str = pprint.pformat(settings)
         settings_str = str(settings)
         self.write('device added: \n')
-        self.write("%d: driver=%s, settings=%s" % (dev_id, selection[0], settings_str))
+        self.write("%d: driver=%s, port=%s, settings=%s" % (dev_id, new_tempcontroller.label, new_tempcontroller.port,  settings_str))
         self.write('\nTo change settings for this driver, type e.g. \'tdev %d sample_sensor A\'\n' % (dev_id,))
         self.device_registry['temperature']['names'] = ['t%d' % (i+1) for i in range(len(self._tc))]
     
@@ -456,7 +456,7 @@ class InstrumentController:
                 for i, tc in enumerate(self._tc):
                     settings = tc.getSettings()
                     settings_str = pprint.pformat(settings)
-                    self.write("%d: driver=%s, settings=\n  %s\n" % (i+1, tc.label, settings_str))
+                    self.write("%d: driver=%s, port=%s, settings=\n  %s\n" % (i+1, tc.label, tc.port, settings_str))
                     self.write('To remove, type \'rtdev %d\'\n' % (i+1))
                 self.write('To change settings, type e.g. \'tdev %d sample_sensor A\'\n' % (i+1,))
             else: 

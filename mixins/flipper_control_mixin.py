@@ -2,7 +2,26 @@ from pyrecs.drivers.rs232gpib import RS232GPIB
 from pyrecs.drivers.FlipperDriver import FlipperPS
 import functools
 #from mixin import MixIn
+ICP_CONVERSIONS = {
+    'arg_commands': {
+        'pfcal': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintFlipperCalibration' },
+        'fcal': { 'numargs': [2,3], 'pyrecs_cmd': 'SetFlipperCalibration' },
+        'rm': { 'numargs': [2,3], 'pyrecs_cmd': 'getMonoFlippingRatio' },
+        'ra': { 'numargs': [0,1], 'pyrecs_cmd': 'getAnaFlippingRatio' },
+        'iset': { 'numargs': [2], 'pyrecs_cmd': 'setFlipperPSCurr' },
+        'vset': { 'numargs': [2], 'pyrecs_cmd': 'setFlipperPSVolt' },
+        'iscan': { 'numargs': [4,5], 'pyrecs_cmd': 'IScan' },
+    },
+        
+    'en_dis_commands': {
+        'flm': { 'numargs': [1], 'pyrecs_cmd': 'setFlipperMonochromator' },
+        'fla': { 'numargs': [1], 'pyrecs_cmd': 'setFlipperAnalyzer'},
+    },
 
+    'increment_commands': {},
+
+    'tied_commands': {},
+}
 class FlipperControlMixin:
     """ 
     Adds flipper control (and polarization awareness) to InstrumentController
@@ -32,18 +51,18 @@ class FlipperControlMixin:
         
         # ICP commands:
         self.pfcal = self.PrintFlipperCalibration
-        self.fcal = self.SetFlipperCalibration
-        self.flm = functools.partial(self.SetFlipper, 0)
-        self.fla = functools.partial(self.SetFlipper, 1)
+        self.fcal = self.setFlipperCalibration
+        self.flm = functools.partial(self.setFlipper, 0)
+        self.fla = functools.partial(self.setFlipper, 1)
         self.rm = functools.partial(self.GetFlippingRatio, 0)
         self.ra = functools.partial(self.GetFlippingRatio, 1)
-        self.iset = self.SetFlipperPSCurr
-        self.vset = self.SetFlipperPSVolt
+        self.iset = self.setFlipperPSCurr
+        self.vset = self.setFlipperPSVolt
         self.iscan = self.IScan
         
         # hook into the IC device registry:
         self.device_registry.update( {'ps':
-                                {'names': self.ps_names, 'updater': self.SetCurrentByName }} )
+                                {'names': self.ps_names, 'updater': self.setCurrentByName }} )
         
     
     def PrintFlipperCalibration(self, ps_num = None):
@@ -72,10 +91,15 @@ class FlipperControlMixin:
         val_now = self.getState()[movable]
         self.PeakScan(movable, numsteps, istart, istep, duration, val_now, comment, Fitter, auto_drive_fit)
                 
-    def SetFlipperCalibration(self, ps_num, cur, engy = None):
+    def setFlipperCalibration(self, ps_num, cur, engy = None):
         self.ip.SetFcal(ps_num, cur, engy)
     
-    def SetFlipper(self, flippernum, enable):
+    def setFlipperMonochromator(self, enable):
+        self.setFlipper(0, enable)
+    def setFlipperAnalyzer(self, enable):
+        self.setFlipper(1, enable)
+    
+    def setFlipper(self, flippernum, enable):
         """ flippers are numbered... flipper 0 is monochromator, flipper 1 is at analyzer usually
         flipper 0 has two power supplies (1 and 2), for flipping and compensation
         flipper 1 also has two (3 and 4)...
@@ -84,26 +108,26 @@ class FlipperControlMixin:
         ps_num = int(flippernum * 2)
         if enable:
             fcals = self.ip.GetFcal()
-            self.flipper_ps[ps_num].SetCurrent(fcals[ps_num+1]['cur'])  # ignores the 'energy' parameter.  This functionality is broken in ICP at ANDR anyway
-            self.flipper_ps[ps_num+1].SetCurrent(fcals[ps_num+2]['cur'])
+            self.flipper_ps[ps_num].setCurrent(fcals[ps_num+1]['cur'])  # ignores the 'energy' parameter.  This functionality is broken in ICP at ANDR anyway
+            self.flipper_ps[ps_num+1].setCurrent(fcals[ps_num+2]['cur'])
         else:
-            self.flipper_ps[ps_num].SetCurrent(0.0)
-            self.flipper_ps[ps_num+1].SetCurrent(0.0)
+            self.flipper_ps[ps_num].setCurrent(0.0)
+            self.flipper_ps[ps_num+1].setCurrent(0.0)
         self.state['flipper%dstate' % flippernum] = enable
         
-    def GetFlippingRatio(self, flippernum, duration):
+    def getFlippingRatio(self, flippernum, duration):
         """ flippers are numbered... flipper 0 is monochromator, flipper 1 is at analyzer usually
         flipper 0 has two power supplies (1 and 2), for flipping and compensation
         flipper 1 also has two (3 and 4)...
         this command turns the flipper off and measures, then repeats with the flipper on """
         # turn them on one at a time:
-        self.SetFlipper(flippernum, False) # turn it off
+        self.setFlipper(flippernum, False) # turn it off
         result = self.Count(duration)
         off_counts = result['counts']
         msg = 'FLIPPER %d OFF:\ncount time: %.4f monitor: %g counts: %g \n' % (flippernum, result['count_time'], result['monitor'], result['counts'])
         self.write(msg, file_msg = ('Count: '+ msg))
         
-        self.SetFlipper(flippernum, True) # turn it on
+        self.setFlipper(flippernum, True) # turn it on
         result = self.Count(duration)
         on_counts = result['counts']
         msg = 'FLIPPER %d ON:\ncount time: %.4f monitor: %g counts: %g \n' % (flippernum, result['count_time'], result['monitor'], result['counts'])
@@ -119,23 +143,28 @@ class FlipperControlMixin:
             self.write("flipping ratio: %.4f (inverse: %.4f) \n" % (flipping_ratio, inverse_ratio))
         
         return flipping_ratio
+    
+    def getMonoFlippingRatio(self, duration):
+        self.getFlippingRatio(0, duration)
+    def getAnaFlippingRatio(self, duration):
+        self.getFlippingRatio(1, duration)
             
-    def SetFlipperByName(self, flippernames, enable):
+    def setFlipperByName(self, flippernames, enable):
         id_len = len('flipper')
         for flippername in flippernames:
             flippernum = int(flippername[id_len:])
-            self.SetFlipper(flippernum, enable)
+            self.setFlipper(flippernum, enable)
     
-    def SetCurrentByName(self, ps_names, currents):
+    def setCurrentByName(self, ps_names, currents):
         ps_nums = [self.ps_lookup[pn] for pn in ps_names]
         for ps_num, current in zip(ps_nums, currents):
-            self.SetFlipperPSCurr(ps_num, current)
+            self.setFlipperPSCurr(ps_num, current)
     
-    def SetFlipperPSCurr(self, ps_num, current):
+    def setFlipperPSCurr(self, ps_num, current):
         self.flipper_ps[ps_num].SetCurrent(float(current))
     
     
-    def SetFlipperPSVolt(self, ps_num, voltage):
+    def setFlipperPSVolt(self, ps_num, voltage):
         self.flipper_ps[ps_num].SetVoltage(float(voltage))
         
 # for compatibility and easy mixing:
