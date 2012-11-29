@@ -298,6 +298,7 @@ class ICPTiedCommands(ICPCommandList):
     extra_args = ''
     
     def recompile_commands(self):
+        
         self.commands_compiled = []
         for numarg in self.commands.keys():
             cmds = self.commands[numarg]
@@ -308,6 +309,22 @@ class ICPTiedCommands(ICPCommandList):
                     regexp += self.SEP.join([self.FP_REGEXP,] * (numarg - 1))
                 regexp += self.END
                 self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))                
+
+class ICPArgKeywordCommands(ICPCommandList):
+    """ commands that include keywords with values in addition to arguments """
+    extra_args = ''    
+    def recompile_commands(self):
+        self.commands_compiled = []
+        for numarg in self.commands.keys():
+            cmds = self.commands[numarg]
+            if len(cmds) > 0:
+                regexp = r'[ \t]*(' + r'|'.join(cmds) + r')'
+                if numarg > 0:
+                    regexp += r'[ \t]*[,=]?[ \t]*'
+                    regexp += self.SEP.join([self.FP_REGEXP,] * numarg)
+                regexp += self.SEP
+                regexp += self.
+                self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))
 
 class ICPTransformer(object):
     """IPython command line transformer that recognizes and replaces ICP
