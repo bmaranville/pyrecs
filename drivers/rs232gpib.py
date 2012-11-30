@@ -1,7 +1,7 @@
 import serial
 
 DEBUG = False
-SER_PORT = '/dev/ttyUSB2'
+SER_PORT = '/dev/ttyUSB3'
 
 #define UNL     0x3F
 #define UNT     0x5F

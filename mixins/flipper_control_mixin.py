@@ -54,8 +54,8 @@ class FlipperControlMixin:
         self.fcal = self.setFlipperCalibration
         self.flm = functools.partial(self.setFlipper, 0)
         self.fla = functools.partial(self.setFlipper, 1)
-        self.rm = functools.partial(self.GetFlippingRatio, 0)
-        self.ra = functools.partial(self.GetFlippingRatio, 1)
+        self.rm = functools.partial(self.getFlippingRatio, 0)
+        self.ra = functools.partial(self.getFlippingRatio, 1)
         self.iset = self.setFlipperPSCurr
         self.vset = self.setFlipperPSVolt
         self.iscan = self.IScan
