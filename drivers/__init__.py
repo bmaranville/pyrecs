@@ -3,3 +3,6 @@
 temperature_controllers = [
     ['Neslab RTE7', 'NESLAB_RTE7', 'NESLAB_BATH'],
     ['Lakeshore 331/340', 'Lakeshore_340', 'Lakeshore340'] ]
+    
+magnet_controllers = [
+    ['Sorensen DCS 60', 'SorensenDCS60', 'Sorensen'] ]

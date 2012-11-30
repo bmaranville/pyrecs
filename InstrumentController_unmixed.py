@@ -387,9 +387,6 @@ class InstrumentController:
     def SetWavelength(self, wl):
         self.ip.SetWavelength(wl)
     
-    def TDevClient(self, *args):
-        self.write('This command must be run from the server, not the client.\nPlease run ic.tdev() in the server window\n')
-    
     def RemoveTemperatureDevice(self, device_num=None):
         if device_num is None:
             self.write('enter \'rtdev i\' to remove temperature controller \'i\'\n')
@@ -464,6 +461,80 @@ class InstrumentController:
             self.write('To add a new (additional) temperature controller: \'atdev\'\n')
         else: # we're adding or reconfiguring a device
             self.ConfigureTemperatureDevice(device_num, keyword, value)
+    
+    def RemoveMagnetDevice(self, device_num=None):
+        if device_num is None:
+            self.write('enter \'rhdev i\' to remove magnet controller \'i\'\n')
+            self.write('(valid i values are between 1 and %d)\n' % (int(device_num), len(self._magnet)))
+        if device_num<1 or device_num>len(self._magnet):
+            self.write('%d is Not a valid magnet device (valid values are between 1 and %d)\n' % (int(device_num), len(self._magnet)))
+            return
+        else:
+            _ = self._magnet.pop(device_num-1) # remove the key
+            self.device_registry['magnet']['names'] = ['h%d' % (i+1) for i in range(len(self._magnet))]
+    
+    def NewMagnetDevice(self, driver_num=None, port=None, **kwargs):
+        hdevices = pyrecs.drivers.magnet_controllers
+        #print "Choose a driver for device %s:" % (str(devicename))
+        if driver_num is None:
+            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'ahdev 1\')\n' % (len(hdevices),))
+            for i, hd in enumerate(hdevices):
+                self.write("%d: %s\n" % (i+1, hd[0])) # label
+            return         
+        elif (int(driver_num) < 1 or int(driver_num)>len(hdevices)):
+            self.write('invalid driver.\n')
+            self.write('Please specify a driver number from 1 to %d:\n (e.g. \'ahdev 1\')\n' % (len(hdevices),))
+            for i, hd in enumerate(hdevices):
+                self.write("%d: %s\n" % (i+1, hd[0])) # label
+            return
+        selection = hdevices[int(driver_num)-1]    
+        #driver = __import__('pyrecs.drivers.'+selection[1], fromlist=selection[2])
+        if len(self._magnet) == 0:
+            if port is None:
+                # then use the default port
+                port = self.ip.GetSerialPort(int(self.ip.InstrCfg['mag_line']))
+            else: 
+                port = self.ip.GetSerialPort(int(port))
+        else: # we already have a defined tc, adding another
+            if port is None:
+                self.write('Must specify a port for any additional (>1) magnet controllers, as\n')
+                self.write('\'ahdev [driver number] [port]\', e.g. \'ahdev 1 5\',\n which corresponds to /dev/ttyUSB4 on the multiport adapter\n')  
+                return
+            else:
+                port = self.ip.GetSerialPort(int(port))
+        driver_module = __import__('pyrecs.drivers.'+selection[1], fromlist=['not_empty'])
+        driver = getattr(driver_module, selection[2])
+        new_magcontroller = driver(port, **kwargs)
+        self._magnet.append(new_magcontroller)
+        dev_id = len(self._magnet)
+        #settings_str = pprint.pformat(settings)
+        settings_str = str(settings)
+        self.write('device added: \n')
+        self.write("%d: driver=%s, port=%s, settings=%s" % (dev_id, new_magcontroller.label, new_magcontroller.port,  settings_str))
+        self.write('\nTo change settings for this driver, type e.g. \'hdev %d sample_sensor A\'\n' % (dev_id,))
+        self.device_registry['magnet']['names'] = ['h%d' % (i+1) for i in range(len(self._magnet))]
+            
+    def MagnetDevice(self, device_num=None, keyword=None, value=None):
+        if device_num is None:
+            if len(self._magnet) > 0: # there are temperature controllers defined
+                print "Defined magnet controllers:"
+                for i, mag in enumerate(self._magnet):
+                    settings = mag.getSettings()
+                    settings_str = pprint.pformat(settings)
+                    self.write("%d: driver=%s, port=%s, settings=\n  %s\n" % (i+1, mag.label, mag.port, settings_str))
+                    self.write('To remove, type \'rhdev %d\'\n' % (i+1))
+                self.write('To change settings, type e.g. \'hdev %d sample_sensor A\'\n' % (i+1,))
+            else: 
+                self.write('No defined magnet controllers.\n')
+            self.write('To add a new (additional) magnet controller: \'ahdev\'\n')
+        else: # we're adding or reconfiguring a device
+            self.ConfigureMagnetDevice(device_num, keyword, value)
+    
+    def ConfigureMagnetDevice(self, device_num, keyword=None, value=None):
+        if (int(device_num) < 1 or int(device_num) > len(self._magnet)):
+            self.write('%d is Not a valid magnet device (valid values are between 1 and %d)\n' % (int(device_num), len(self._magnet)))
+            return
+        self.write(self._magnet[int(device_num) -1].configure(keyword, value))
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix

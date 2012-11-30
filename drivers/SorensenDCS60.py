@@ -1,4 +1,3 @@
-import wx
 import serial
 from numpy import abs
 import time
@@ -9,7 +8,7 @@ class Sorensen:
     """Class to read and write Voltage and Current to Sorensen DCS30"""
     def __init__(self, port = '/dev/ttyUSB3', serial_mode = True, gpib_addr = GPIB_ADDR):
         if serial_mode:
-            self.serial = serial.serial_for_url(port, 19200, parity='N', rtscts=False, xonxoff=False, timeout=1)
+            self.serial = serial.Serial(port, 19200, parity='N', rtscts=False, xonxoff=False, timeout=1)
             self.newline_str = '\r'
             self.sendCommand = self.sendSerialCommand
             self.receiveReply = self.receiveSerialReply
