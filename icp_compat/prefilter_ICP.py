@@ -212,20 +212,21 @@ class ICPCommandList(object):
     
     def clear_all(self):
         self.commands = {}
-        self.commands_compiled = []
+        self.commands_compiled = {}
         self.command_conversion = {}
     
     def match_and_replace(self, subline):
         match_found = False
         cmd = subline
-        for regexp in self.commands_compiled:
+        for numarg in self.commands_compiled:
+            regexp = self.commands_compiled[numarg]
             match = regexp.match(subline)
             if match:
                 match_found = True
                 groups = match.groups()
                 self.groups = groups
                 cmd = 'ic.' + self.command_conversion[groups[0]] + '('
-                for group in groups[1:]:
+                for group in groups[1:numarg+1]:
                     if group: 
                         if group == '+' or group == '*': # this is an enable command
                             cmd += 'True' 
@@ -233,6 +234,8 @@ class ICPCommandList(object):
                             cmd += 'False'
                         else: # everything else
                             cmd += group + ', '
+                for group in groups[numarg+1:]: # extra, kwargs
+                    cmd += repr(group) + ', '
                 cmd += self.extra_args
                 cmd += ')'
                 break # go with the first match
@@ -259,7 +262,7 @@ class ICPCommandList(object):
         self.recompile_commands()
     
     def recompile_commands(self):
-        self.commands_compiled = []
+        self.commands_compiled = {}
         for numarg in self.commands.keys():
             cmds = self.commands[numarg]
             if len(cmds) > 0:
@@ -268,17 +271,17 @@ class ICPCommandList(object):
                     regexp += r'[ \t]*[,=]?[ \t]*'
                     regexp += self.SEP.join([self.FP_REGEXP,] * numarg)
                 regexp += self.END
-                self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))
+                self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)
 
 class ICPEnableDisableCommands(ICPCommandList):
     """ commands that take + or - as only argument, and do an enable or disable """
     def recompile_commands(self):
-        self.commands_compiled = []
+        self.commands_compiled = {}
         for numarg in self.commands.keys():
             cmds = self.commands[numarg]
             if len(cmds) > 0:
                 regexp = r'[ \t]*(' + r'|'.join(cmds) + r')[ \t]*([-+*])[ \t]*$'
-                self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))
+                self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)
                 
 class ICPIncrementCommands(ICPCommandList):
     """ commands that increment the value of a device - always 2 arguments:
@@ -286,12 +289,12 @@ class ICPIncrementCommands(ICPCommandList):
     extra_args = ''
     
     def recompile_commands(self):
-        self.commands_compiled = []
+        self.commands_compiled = {}
         for numarg in self.commands.keys():
             cmds = self.commands[numarg]
             if len(cmds) > 0:
                 regexp = r'[ \t]*('+r'|'.join(cmds)+r')[ \t]*'+self.INT_REGEXP+r'[ \t]*i'+r'[ \t]*[,=]?[ \t]*'+self.FP_REGEXP+r'[ \t]*$'
-                self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))
+                self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)
                 
 class ICPTiedCommands(ICPCommandList):
     """ commands that tie two motors, usually 3 and 4 """
@@ -299,7 +302,7 @@ class ICPTiedCommands(ICPCommandList):
     
     def recompile_commands(self):
         
-        self.commands_compiled = []
+        self.commands_compiled = {}
         for numarg in self.commands.keys():
             cmds = self.commands[numarg]
             if len(cmds) > 0:
@@ -308,13 +311,13 @@ class ICPTiedCommands(ICPCommandList):
                     regexp += r'[ \t]*[,=]?[ \t]*'
                     regexp += self.SEP.join([self.FP_REGEXP,] * (numarg - 1))
                 regexp += self.END
-                self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))                
+                self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)                
 
 class ICPArgKeywordCommands(ICPCommandList):
     """ commands that include keywords with values in addition to arguments """
     extra_args = ''    
     def recompile_commands(self):
-        self.commands_compiled = []
+        self.commands_compiled = {}
         for numarg in self.commands.keys():
             cmds = self.commands[numarg]
             if len(cmds) > 0:
@@ -322,9 +325,9 @@ class ICPArgKeywordCommands(ICPCommandList):
                 if numarg > 0:
                     regexp += r'[ \t]*[,=]?[ \t]*'
                     regexp += self.SEP.join([self.FP_REGEXP,] * numarg)
-                regexp += self.SEP
-                regexp += self.
-                self.commands_compiled.append(re.compile(regexp, re.IGNORECASE))
+                regexp += '(?:' + self.SEP + r'([a-z0-9]+)[ \t]*[ ,=][ \t]*([a-z0-9]+))*'
+                regexp += self.END
+                self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)
 
 class ICPTransformer(object):
     """IPython command line transformer that recognizes and replaces ICP
@@ -348,7 +351,8 @@ class ICPTransformer(object):
         self.en_dis_commands = ICPEnableDisableCommands()
         self.increment_commands = ICPIncrementCommands()
         self.tied_commands = ICPTiedCommands()
-        self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands]
+        self.kw_commands = ICPArgKeywordCommands()
+        self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands, self.kw_commands]
     
     def transform(self, line, continue_prompt):
         """Alternate prefilter for ICP-formatted commands """
