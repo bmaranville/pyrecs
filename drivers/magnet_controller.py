@@ -1,11 +1,13 @@
 import serial
+import rs232gpib
 
 class MagnetController(object):
-    """ base class for generic (serial-port controlled) temperature controller.  Methods for:
-        GetTemp, 
-        GetAuxTemp, 
-        SetTemp
-        GetSetpoint
+    """ base class for generic (serial-port to gpib or serial-port direct controlled) magnet controller.
+        Methods for:
+         getCurrent
+         setCurrent
+         getVoltage
+         setVoltage
     must be defined in derived classes
     """
     def __init__(self, port = '/dev/ttyUSB3', gpib_addr=5, comm_mode="gpib"):
@@ -15,6 +17,8 @@ class MagnetController(object):
         self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
         self.settings = {}
         self.valid_settings = {}
+    
+    
         
     def getSettings(self):
         return self.settings

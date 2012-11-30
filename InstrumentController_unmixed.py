@@ -473,7 +473,7 @@ class InstrumentController:
             _ = self._magnet.pop(device_num-1) # remove the key
             self.device_registry['magnet']['names'] = ['h%d' % (i+1) for i in range(len(self._magnet))]
     
-    def NewMagnetDevice(self, driver_num=None, port=None, **kwargs):
+    def NewMagnetDevice(self, driver_num=None):
         hdevices = pyrecs.drivers.magnet_controllers
         #print "Choose a driver for device %s:" % (str(devicename))
         if driver_num is None:
@@ -488,30 +488,16 @@ class InstrumentController:
                 self.write("%d: %s\n" % (i+1, hd[0])) # label
             return
         selection = hdevices[int(driver_num)-1]    
-        #driver = __import__('pyrecs.drivers.'+selection[1], fromlist=selection[2])
-        if len(self._magnet) == 0:
-            if port is None:
-                # then use the default port
-                port = self.ip.GetSerialPort(int(self.ip.InstrCfg['mag_line']))
-            else: 
-                port = self.ip.GetSerialPort(int(port))
-        else: # we already have a defined tc, adding another
-            if port is None:
-                self.write('Must specify a port for any additional (>1) magnet controllers, as\n')
-                self.write('\'ahdev [driver number] [port]\', e.g. \'ahdev 1 5\',\n which corresponds to /dev/ttyUSB4 on the multiport adapter\n')  
-                return
-            else:
-                port = self.ip.GetSerialPort(int(port))
         driver_module = __import__('pyrecs.drivers.'+selection[1], fromlist=['not_empty'])
         driver = getattr(driver_module, selection[2])
-        new_magcontroller = driver(port, **kwargs)
+        new_magcontroller = driver()
         self._magnet.append(new_magcontroller)
         dev_id = len(self._magnet)
         #settings_str = pprint.pformat(settings)
         settings_str = str(settings)
         self.write('device added: \n')
-        self.write("%d: driver=%s, port=%s, settings=%s" % (dev_id, new_magcontroller.label, new_magcontroller.port,  settings_str))
-        self.write('\nTo change settings for this driver, type e.g. \'hdev %d sample_sensor A\'\n' % (dev_id,))
+        self.write("%d: driver=%s, settings=%s" % (dev_id, new_magcontroller.label, settings_str))
+        self.write('\nTo change settings for this driver, type e.g. \'hdev %d comm_mode=gpib\'\n' % (dev_id,))
         self.device_registry['magnet']['names'] = ['h%d' % (i+1) for i in range(len(self._magnet))]
             
     def MagnetDevice(self, device_num=None, keyword=None, value=None):
