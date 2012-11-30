@@ -26,6 +26,10 @@ ICP_CONVERSIONS = {
         'rtdev': { 'numargs': [0,1], 'pyrecs_cmd': 'RemoveTemperatureDevice'}
     },
         
+    'arg_kw_commands': {
+        'tdev': { 'numargs': [1], 'pyrecs_cmd': 'ConfigureTemperatureDevice'},
+    },
+    
     'en_dis_commands': {
         'w': { 'numargs': [1], 'pyrecs_cmd': 'setLogging'},
         'p': { 'numargs': [1], 'pyrecs_cmd': 'setPolarization'}
@@ -34,7 +38,7 @@ ICP_CONVERSIONS = {
     'increment_commands': {
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotorIncrement'}
     },
-
+    
     'tied_commands': {
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotorTied'},
         'fp': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeakTied'}

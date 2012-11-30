@@ -321,6 +321,10 @@ def register_prefilter_commands(icp_conversion_table):
         entry = icp_conversion_table['tied_commands'][cmd]
         prefilter_ICP.icpt.tied_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
     if DEBUG: print "tied commands registered"
+    for cmd in icp_conversion_table['arg_kw_commands']:
+        entry = icp_conversion_table['arg_kw_commands'][cmd]
+        prefilter_ICP.icpt.arg_kw_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
+    if DEBUG: print "kw commands registered"
     
 def get_cmds():
     #icp_conversions = ic.GetICPConversions()

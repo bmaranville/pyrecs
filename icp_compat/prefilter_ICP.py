@@ -351,8 +351,8 @@ class ICPTransformer(object):
         self.en_dis_commands = ICPEnableDisableCommands()
         self.increment_commands = ICPIncrementCommands()
         self.tied_commands = ICPTiedCommands()
-        self.kw_commands = ICPArgKeywordCommands()
-        self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands, self.kw_commands]
+        self.arg_kw_commands = ICPArgKeywordCommands()
+        self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands, self.arg_kw_commands]
     
     def transform(self, line, continue_prompt):
         """Alternate prefilter for ICP-formatted commands """
