@@ -6,7 +6,7 @@ class HP6632B(MagnetController):
     label = 'Hewlett-Packard 6632B'
     def __init__(self):
         TemperatureController.__init__(self)
-        """ the Temperature serial connection is on the second port at AND/R, which is /dev/ttyUSB1 """
+        """ the serial to gpib converter is on the fourth port at MAGIK, which is /dev/ttyUSB3 """
         self.settings = {
             'serial_port': '/dev/ttyUSB4',
             'gpib_addr': '5'
@@ -19,6 +19,7 @@ class HP6632B(MagnetController):
             'comm_mode': ['gpib', 'serial'],
             'serial_to_gpib_port': ['/dev/ttyUSB%d' % i for i in range(3, 16)],
             }
+	self.setCommunications()
     
     def updateSettings(self, keyword, value):
         self.settings[keyword] = value
