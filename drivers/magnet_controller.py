@@ -4,6 +4,8 @@ import rs232gpib
 class MagnetController(object):
     """ base class for generic (serial-port to gpib or serial-port direct controlled) magnet controller.
         Methods for:
+         setField
+         getField
          getCurrent
          setCurrent
          getVoltage
@@ -19,6 +21,10 @@ class MagnetController(object):
         self.valid_settings = {}
     
     
+    def setField(self, field):
+        self.setCurrent(field)
+    def getField(self):
+        return self.getCurrent()
         
     def getSettings(self):
         return self.settings
@@ -40,12 +46,13 @@ class MagnetController(object):
         self.settings[keyword] = value
         # override if you need more than this.
         
-    def getTemp(self, sensor=None):
+    def getCurrent(self, sensor=None):
         pass
     
-    def getTemp(self, temp):
+    def getVoltage(self, temp):
         pass
         
-    def getSetpoint(self):
+    def setCurrent(self, current):
         pass
-    
+    def setVoltage(self, volts):
+        pass

@@ -24,7 +24,7 @@ class TemperatureController(object):
         if not keyword in valid_keywords:
             return "not a valid keyword: choices are " + ",".join(valid_keywords)
         valid_values = self.valid_settings[keyword]
-        if not value in valid_values.keys():
+        if not value in valid_values:
             return_str = "valid values for %s:\n" % (keyword,)
             return_str += '\n'.join(['%s: %s' % (key, valid_values[key]) for key in valid_values])
             return return_str

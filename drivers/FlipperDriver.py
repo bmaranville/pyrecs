@@ -1,5 +1,6 @@
 import rs232gpib
 import numpy
+from magnet_controller import MagnetController
 DEBUG=True
 
 class HP6632B(MagnetController):
@@ -9,7 +10,7 @@ class HP6632B(MagnetController):
         """ the serial to gpib converter is on the fourth port at MAGIK, which is /dev/ttyUSB3 """
         self.settings = {
             'serial_port': '/dev/ttyUSB4',
-            'gpib_addr': '5'
+            'gpib_addr': '5',
             'comm_mode': 'gpib',
             'serial_to_gpib_port': '/dev/ttyUSB3'
             }

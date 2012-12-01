@@ -280,7 +280,9 @@ class InstrumentController:
                                 'scaler':
                                 {'names': ['scaler'], 'updater': self.scaler },
                                 'temperature':
-                                {'names': [], 'updater': self.SetTemperature} }
+                                {'names': [], 'updater': self.SetTemperatureByName },
+                                'magnet':
+                                {'names': [], 'updater': self.SetMagnetByName} }
         
         self.state = {}
         self.getState()
@@ -493,6 +495,7 @@ class InstrumentController:
         new_magcontroller = driver()
         self._magnet.append(new_magcontroller)
         dev_id = len(self._magnet)
+        settings = new_magcontroller.getSettings()
         #settings_str = pprint.pformat(settings)
         settings_str = str(settings)
         self.write('device added: \n')
@@ -521,6 +524,20 @@ class InstrumentController:
             self.write('%d is Not a valid magnet device (valid values are between 1 and %d)\n' % (int(device_num), len(self._magnet)))
             return
         self.write(self._magnet[int(device_num) -1].configure(keyword, value))
+    
+    def SetMagnetByName(self, magcontrollers, fields):
+        """ pass a list of magnet controllers and fields to set """
+        # device mapping: from "h1" to 0, "h10" to 9, etc...
+        for mcname, field in zip(magcontrollers, fields):
+            mc = self._magnet[int(mcname[1:]) - 1]
+            mc.setField(field)
+            
+    def SetTemperatureByName(self, tempcontrollers, temps):
+        """ pass a list of temperature controllers and temperatures to set """
+        # device mapping: from "t1" to 0, "t10" to 9, etc...
+        for tcname, temp in zip(tempcontrollers, temps):
+            tc = self._tc[int(tcname[1:]) - 1]
+            tc.setTemp(temp)
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix
@@ -553,8 +570,12 @@ class InstrumentController:
         self.state.setdefault('project_path', self.datafolder)
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
-        self.state.setdefault('magnet_defined', (len(self._magnet) > 0))
+        self.state['magnet_defined'] = (len(self._magnet) > 0)
+        for i, mc in enumerate(self._magnet):
+            self.state['h%d' % (i+1)] = mc.getField()
         self.state['temp_controller_defined'] = len(self._tc) > 0
+        for i, tc in enumerate(self._tc):
+            self.state['t%d' % (i+1)] = tc.getTemp()
         self.state['timestamp'] = time.time()
         return self.state.copy()
     
