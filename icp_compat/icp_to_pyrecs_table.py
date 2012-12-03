@@ -23,7 +23,10 @@ ICP_CONVERSIONS = {
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotor'},
         'tdev': { 'numargs': [0,1,2], 'pyrecs_cmd': 'TemperatureDevice'},
         'atdev': { 'numargs': [0,1,2], 'pyrecs_cmd': 'NewTemperatureDevice'},
-        'rtdev': { 'numargs': [0,1], 'pyrecs_cmd': 'RemoveTemperatureDevice'}
+        'rtdev': { 'numargs': [0,1], 'pyrecs_cmd': 'RemoveTemperatureDevice'},
+        'hdev': { 'numargs': [0,1,2], 'pyrecs_cmd': 'MagnetDevice'},
+        'ahdev': { 'numargs': [0,1], 'pyrecs_cmd': 'NewMagnetDevice'},
+        'rhdev': { 'numargs': [0,1], 'pyrecs_cmd': 'RemoveMagnetDevice'}
     },
         
     'arg_kw_commands': {

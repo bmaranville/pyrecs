@@ -54,7 +54,7 @@ class HP6632B(MagnetController):
     def getCurrent(self):
         self.sendCommand('IOUT?')
         reply = self.receiveReply()
-        return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one
+        return float(reply.split()[-1]) # if the supply returns more strings, take the last one
         
     def setVoltage(self, value):
         self.sendCommand('VSET %.4f' % value)
@@ -62,7 +62,7 @@ class HP6632B(MagnetController):
     def getVoltage(self):
         self.sendCommand('VOUT?')
         reply = self.receiveReply()
-        return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one      
+        return float(reply.split()[-1]) # if the supply returns more strings, take the last one      
 
 class FlipperPS:
     """ class to control a flipper power supply.
@@ -87,7 +87,7 @@ class FlipperPS:
     def getCurrent(self):
         self.sendCommand('IOUT?')
         reply = self.receiveReply()
-        return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one
+        return float(reply.split()[-1]) # if the supply returns more strings, take the last one
         
     def setVoltage(self, value):
         self.sendCommand('VSET %.4f' % value)
@@ -95,4 +95,4 @@ class FlipperPS:
     def getVoltage(self):
         self.sendCommand('VOUT?')
         reply = self.receiveReply()
-        return numpy.float32(reply.split()[-1]) # if the supply returns more strings, take the last one
+        return float(reply.split()[-1]) # if the supply returns more strings, take the last one

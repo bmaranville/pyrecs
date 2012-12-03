@@ -41,14 +41,14 @@ class XPeekPublisher(Publisher):
             fit_params = [fit_params[0], 0.0, 0.0, fit_params[1], fit_params[2], fit_params[3]]
             converged = True
         elif scan_type == 'ISCAN':
-            fit_result = state['fit_result']
+            fit_result = result['fit_result']
             fit_params = [fit_result[fp] for fp in fit_result if (not fp[-4:] == '_err')]
             converged = True
         else :
             fit_params = []
             converged = False
             
-        self.broadcaster.end(scan_type, fit_params, converged, instrument_name)
+        self.broadcaster.end(scan_type, fit_params, converged, namestr=instrument_name)
     
 class xpeek_broadcast:
     """ initialize, update and end an xpeek broadcast of a findpeak scan """
@@ -61,9 +61,11 @@ class xpeek_broadcast:
         self.instrument_name = instrument_name
         self.pointnum = 1
          
-    def new_findpeak(self, npts, filename, vary):
+    def new_findpeak(self, npts, filename, vary, namestr=None):
+        if namestr is None:
+            namestr = self.instrument_name
         outstr = ''
-        outstr += self.instrument_name + ':START\t'
+        outstr += namestr + ':START\t'
         outstr += 'NPTS=% 10d\t' % npts
         outstr += 'FILE=%s\t' % filename
         outstr += 'VARY='
@@ -75,7 +77,9 @@ class xpeek_broadcast:
         self.pointnum = 1
         self.broadcast(outstr)
     
-    def new_data(self, npts, filename, vary=[], comment = ''):
+    def new_data(self, npts, filename, vary=[], comment = '', namestr=None):
+        if namestr is None:
+            namestr = self.instrument_name
         self.vary = vary
         self.npts = npts
         self.filename = filename
@@ -113,9 +117,11 @@ class xpeek_broadcast:
         self.pointnum = pointnum + 1
         self.broadcast(outstr)
         
-    def end(self, scan_type = None, fit_params = [], converged = False):
+    def end(self, scan_type = None, fit_params = [], converged = False, namestr=None):
+        if namestr is None:
+            namestr = self.instrument_name
         outstr = ''
-        outstr += self.instrument_name + ':END\t'
+        outstr += namestr + ':END\t'
         if scan_type in ['FP', 'ISCAN']:
             outstr += 'TYPE=%s\t' % (scan_type,)
             for i, param in enumerate(fit_params):

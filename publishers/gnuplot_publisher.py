@@ -28,9 +28,9 @@ class GnuplotPublisher(Publisher):
             f.write(outstr)            
         title = scan_def['filename']
         if self.auto_poisson_errorbars:
-            self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
+            self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 3 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
         else:
-            self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
+            self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 3 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
         
     def publish_end(self, state, scan_def):
         counts_col = len(scan_def['vary']) + 1
@@ -41,13 +41,13 @@ class GnuplotPublisher(Publisher):
             for pn in fit_params.keys():
                 self.plot.stdin.write('%s = %f \n' % (pn, fit_params[pn]))
             if self.auto_poisson_errorbars:
-                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d))title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,counts_col,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d))title \'%s\' w errorbars lt 2 ps 3 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,counts_col,title))
             else:
-                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 3 pt 7 lc rgb "green",' % (self.tmp_path,counts_col,title))
             self.plot.stdin.write('f(x) w lines lt 2 lc rgb "red"\n')
         else:
             if self.auto_poisson_errorbars:
-                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d:(1+sqrt(%d)) title \'%s\' w errorbars lt 2 ps 3 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,counts_col,title))
             else:
-                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 1 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
+                self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 3 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
 

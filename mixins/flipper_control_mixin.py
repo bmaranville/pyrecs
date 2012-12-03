@@ -1,15 +1,28 @@
 from pyrecs.drivers.rs232gpib import RS232GPIB
 from pyrecs.drivers.FlipperDriver import FlipperPS
 import functools
+import collections
+
+def update(d, u):
+    """ recursive dictionary update """
+    for k, v in u.iteritems():
+        if isinstance(v, collections.Mapping):
+            r = update(d.get(k, {}), v)
+            d[k] = r
+        else:
+            d[k] = u[k]
+    return d
 #from mixin import MixIn
 ICP_CONVERSIONS = {
     'arg_commands': {
         'pfcal': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintFlipperCalibration' },
-        'fcal': { 'numargs': [2,3], 'pyrecs_cmd': 'SetFlipperCalibration' },
-        'rm': { 'numargs': [2,3], 'pyrecs_cmd': 'getMonoFlippingRatio' },
+        'fcal': { 'numargs': [2,3], 'pyrecs_cmd': 'setFlipperCalibration' },
+        'rm': { 'numargs': [0,1], 'pyrecs_cmd': 'getMonoFlippingRatio' },
         'ra': { 'numargs': [0,1], 'pyrecs_cmd': 'getAnaFlippingRatio' },
-        'iset': { 'numargs': [2], 'pyrecs_cmd': 'setFlipperPSCurr' },
-        'vset': { 'numargs': [2], 'pyrecs_cmd': 'setFlipperPSVolt' },
+        'iset': { 'numargs': [2], 'pyrecs_cmd': 'iset' },
+        'vset': { 'numargs': [2], 'pyrecs_cmd': 'vset' },
+        'iget': { 'numargs': [1], 'pyrecs_cmd': 'iget' },
+        'vget': { 'numargs': [1], 'pyrecs_cmd': 'vget' },
         'iscan': { 'numargs': [4,5], 'pyrecs_cmd': 'IScan' },
     },
         
@@ -43,11 +56,14 @@ class FlipperControlMixin:
         term_line = 4
         if self.gpib is None:
             self.gpib = RS232GPIB(serial_port = self.ip.GetSerialPort(term_line)) # initialize our gpib controller
-        num_flipper_ps = len(self.ip.GetFcal())
+        #num_flipper_ps = len(self.ip.GetFcal())
+        num_pol_ps = int(self.ip.InstrCfg['#pol_ps'])
+        self.ps_names = ['ps%d' %i for i in range(1, num_pol_ps+1)]
+        self.ps_lookup = dict(zip(self.ps_names, range(num_pol_ps)))
         self.flipper_ps = []
-        for i in range(num_flipper_ps): #initialize all the flipper power supplies
+        for i in range(num_pol_ps): #initialize all the flipper power supplies
             self.flipper_ps.append(FlipperPS(gpib_addr=i+1, gpib_controller = self.gpib))
-        self.flipperstate = [None, None] # initialize the flippers to "Unknown"
+        self.flipperstate = [None, None] # initialize the flippers to "Unknown"    
         
         # ICP commands:
         self.pfcal = self.PrintFlipperCalibration
@@ -56,14 +72,12 @@ class FlipperControlMixin:
         self.fla = functools.partial(self.setFlipper, 1)
         self.rm = functools.partial(self.getFlippingRatio, 0)
         self.ra = functools.partial(self.getFlippingRatio, 1)
-        self.iset = self.setFlipperPSCurr
-        self.vset = self.setFlipperPSVolt
         self.iscan = self.IScan
         
         # hook into the IC device registry:
         self.device_registry.update( {'ps':
-                                {'names': self.ps_names, 'updater': self.setCurrentByName }} )
-        
+                                {'names': self.ps_names, 'updater': self.setCurrentByName, 'getter': self.getCurrentByName }} )
+        self.icp_conversions = update(self.icp_conversions, ICP_CONVERSIONS)
     
     def PrintFlipperCalibration(self, ps_num = None):
         if not ps_num:
@@ -86,10 +100,13 @@ class FlipperControlMixin:
     def IScan(self, ps_num, istart, istep, istop, duration=-1, auto_drive_fit = False):
         numsteps = int( abs(float(istop - istart) / (istep)) + 1)
         comment = 'ISCAN'
-        Fitter = self.cossquared_fitter
+        if ps_num in [1,3]:
+            Fitter = self.cossquared_fitter
+        else:
+            Fitter = self.quadratic_fitter
         movable = 'ps%d' % (ps_num,)
-        val_now = self.getState()[movable]
-        self.PeakScan(movable, numsteps, istart, istep, duration, val_now, comment, Fitter, auto_drive_fit)
+        val_now = self.getCurrentByName(movable, poll=True)
+        self.PeakScan(movable, numsteps, istart, istep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
                 
     def setFlipperCalibration(self, ps_num, cur, engy = None):
         self.ip.SetFcal(ps_num, cur, engy)
@@ -159,13 +176,41 @@ class FlipperControlMixin:
         ps_nums = [self.ps_lookup[pn] for pn in ps_names]
         for ps_num, current in zip(ps_nums, currents):
             self.setFlipperPSCurr(ps_num, current)
+        return [self.getCurrentByName(ps_name, poll=True) for ps_name in ps_names]
+            
     
-    def setFlipperPSCurr(self, ps_num, current):
-        self.flipper_ps[ps_num].SetCurrent(float(current))
+    def getCurrentByName(self, ps_name, poll=False):
+        ps_num = self.ps_lookup[ps_name]
+        if poll==True:
+            curr = self.getFlipperPSCurr(ps_num)
+            self.state[ps_name] = curr
+            return curr
+        else:
+            return self.state.get(ps_name, '')
     
-    
-    def setFlipperPSVolt(self, ps_num, voltage):
-        self.flipper_ps[ps_num].SetVoltage(float(voltage))
+    def getFlipperPSCurr(self, ps_num):
+        return self.flipper_ps[ps_num].getCurrent()
+    def getFlipperPSVolt(self, ps_num):
+        return self.flipper_ps[ps_num].getVoltage()
         
+    def setFlipperPSCurr(self, ps_num, current):
+        self.flipper_ps[ps_num].setCurrent(float(current))
+      
+    def setFlipperPSVolt(self, ps_num, voltage):
+        self.flipper_ps[ps_num].setVoltage(float(voltage))
+    
+    def iset(self, ps_id, current):
+        """ power supply id begins at 1, not 0 in interface """
+        self.setFlipperPSCurr((ps_id-1), current)
+    def iget(self, ps_id):
+        """ power supply id begins at 1, not 0 in interface """
+        return self.getFlipperPSCurr((ps_id-1))
+    def vset(self, ps_id, voltage):
+        """ power supply id begins at 1, not 0 in interface """
+        self.setFlipperPSVolt((ps_id-1), voltage)
+    def vget(self, ps_id):
+        """ power supply id begins at 1, not 0 in interface """
+        return self.getFlipperPSVolt((ps_id-1))
+          
 # for compatibility and easy mixing:
 mixin_class = FlipperControlMixin

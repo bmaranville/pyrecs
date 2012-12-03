@@ -189,9 +189,7 @@ class InstrumentController:
         self.motor_names = ['a%d' % i for i in self.motor_numbers]
         self.motor_lookup = dict(zip(self.motor_names, self.motor_numbers))
         
-        num_pol_ps = int(self.ip.InstrCfg['#pol_ps'])
-        self.ps_names = ['ps%d' %i for i in range(1, num_pol_ps+1)]
-        self.ps_lookup = dict(zip(self.ps_names, range(1, num_pol_ps+1)))
+        
         
         VIPER_mot_line = int(self.ip.InstrCfg['VIPER_mot_line'])
         vme = VME(port = self.ip.GetSerialPort(VIPER_mot_line)) # initialize the VME box (motors, scaler)
@@ -217,10 +215,10 @@ class InstrumentController:
         #self.fitter = FitGnuplot
         self.gauss_fitter = FitGaussGnuplot
         self.cossquared_fitter = FitCosSquaredGnuplot
-        #self.quadratic_fitter = FitQuadraticGnuplot
+        self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
-        #self.default_publishers = [update_xpeek.XPeekPublisher()]
-        self.default_publishers = [GnuplotPublisher(auto_poisson_errorbars=False)]
+        self.default_publishers = [update_xpeek.XPeekPublisher(), GnuplotPublisher(auto_poisson_errorbars=False)]
+        #self.default_publishers = [GnuplotPublisher(auto_poisson_errorbars=False)]
         self.logfilename = self.getNextFilename(time.strftime('%b%d%Y_'), '.LOG')
         self.logwriter = LogWriter(self.logfilename)
         self.get_input = raw_input #defaults to local prompt - override in server
@@ -276,13 +274,13 @@ class InstrumentController:
         self.icp_conversions = ICP_CONVERSIONS
         
         self.device_registry = {'motor': 
-                                {'names': self.motor_names, 'updater': self.DriveMotorByName },
-                                'scaler':
-                                {'names': ['scaler'], 'updater': self.scaler },
+                                {'names': self.motor_names, 'updater': self.DriveMotorByName, 'getter': self.GetMotorByName },
+                                #'scaler':
+                                #{'names': ['scaler'], 'updater': self.scaler, 'getter': self.GetCountSettings },
                                 'temperature':
-                                {'names': [], 'updater': self.SetTemperatureByName },
+                                {'names': [], 'updater': self.SetTemperatureByName, 'getter': self.GetTemperatureByName },
                                 'magnet':
-                                {'names': [], 'updater': self.SetMagnetByName} }
+                                {'names': [], 'updater': self.SetMagnetByName, 'getter': self.GetMagnetByName } }
         
         self.state = {}
         self.getState()
@@ -532,12 +530,30 @@ class InstrumentController:
             mc = self._magnet[int(mcname[1:]) - 1]
             mc.setField(field)
             
+    def GetMagnetByName(self, mc_name, poll=False):
+        mcnum = int(mcname[1:])
+        if poll==True:
+            field = self._magnet[mcnum].getField()
+            self.state[mc_name] = field
+            return field
+        else:
+            return self.state.get(mc_name, '')
+            
     def SetTemperatureByName(self, tempcontrollers, temps):
         """ pass a list of temperature controllers and temperatures to set """
         # device mapping: from "t1" to 0, "t10" to 9, etc...
         for tcname, temp in zip(tempcontrollers, temps):
             tc = self._tc[int(tcname[1:]) - 1]
             tc.setTemp(temp)
+            
+    def GetTemperatureByName(self, tc_name, poll=False):
+        tcnum = int(tcname[1:])
+        if poll==True:
+            temp = self._tc[tcnum].getTemp()
+            self.state[tc_name] = temp
+            return temp
+        else:
+            return self.state.get(tc_name, '')
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix
@@ -555,18 +571,23 @@ class InstrumentController:
         new_filename = prefix + new_filenum_str + suffix
         return new_filename
     
-    def getState(self):
-        """ get a dictionary representing the current instrument state """
+    def getState(self, poll=False):
+        """ get a dictionary representing the current instrument state
+        If poll==True, grab a current reading from all hardware """
         # first grab the motors and collimation etc. from the backend
         self.state.update(self.ip.getState())
         # then augment the state definition with stuff only the InstrumentController knows
         self.state.setdefault('scaler_gating_mode', "'TIME'")
         self.state.setdefault('scaler_time_preset', 1.0)
         self.state.setdefault('scaler_monitor_preset', 1000)
-        self.state.setdefault('polarization_enabled', self.polarization_enabled)
+        #self.state.setdefault('polarization_enabled', self.polarization_enabled)
         #self.state.setdefault('psd_enabled', self.getPSDActive() )
         #self.state.setdefault('flipper1', self.flipperstate[0])
         #self.state.setdefault('flipper2', self.flipperstate[1])
+        for groupname in self.device_registry:
+            device_group = self.device_registry[groupname]
+            for devicename in device_group['names']:
+                self.state.update({devicename: device_group['getter'](devicename, poll=poll)})
         self.state.setdefault('project_path', self.datafolder)
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
@@ -578,6 +599,13 @@ class InstrumentController:
             self.state['t%d' % (i+1)] = tc.getTemp()
         self.state['timestamp'] = time.time()
         return self.state.copy()
+    
+    def GetCountSettings(self, scaler_name):
+        counter_state = {
+            'scaler_gating_mode': self.state.get('scaler_gating_mode', "'TIME'"),
+            'scaler_time_preset': self.state.get('scaler_time_preset', 1.0),
+            'scaler_monitor_preset': self.state.get('scaler_monitor_preset', 1000) }
+        return counter_state
     
     def updateState(self, target_state):
         new_state = target_state.copy()
@@ -834,6 +862,13 @@ class InstrumentController:
         motor_list = [self.motor_lookup[s] for s in motors_to_move]
         # i.e. 'a3' is motor 3
         self.DriveMultiMotor(motor_list, position_list, do_backlash, check_limits, reraise_exceptions) 
+        
+    def GetMotorByName(self, motorname, poll=False):
+        motornum = self.motor_lookup[motorname]
+        if poll==True: 
+            return self.GetSoftMotorPos(motornum)
+        else:
+            return self.GetStoredSoftMotorPos(motornum)
     
     def DriveMultiMotor(self, motors_to_move, position_list, do_backlash = True, check_limits = True, reraise_exceptions = False):
         """ Drive motor to new position with optional backlash, and tolerance and limit checking """   
