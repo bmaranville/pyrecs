@@ -2,6 +2,7 @@ from pyrecs.drivers.rs232gpib import RS232GPIB
 from pyrecs.drivers.FlipperDriver import FlipperPS
 import functools
 import collections
+DEBUG = False
 
 def update(d, u):
     """ recursive dictionary update """
@@ -177,7 +178,7 @@ class FlipperControlMixin:
         self.getFlippingRatio(1, duration)
             
     def setFlipperByName(self, flippernames, enable_list):
-        print "setting flippers by name!: ", flippernames
+        if DEBUG: print "setting flippers by name!: ", flippernames
         id_len = len('flipper')
         for flippername, en in zip(flippernames, enable_list):
             flippernum = int(flippername[id_len:])

@@ -1274,9 +1274,13 @@ class InstrumentController:
         params.setdefault('scaler_time_preset', 1.0)
         params.setdefault('scaler_monitor_preset', 1000)
         if params['scaler_gating_mode'] == 'TIME':
-            return self.updateState({'result': self.Count(-1.0 * params['scaler_time_preset'])} )
+            count_time = params['scaler_time_preset']
+            if 'scaler_prefactor' in params and params['scaler_prefactor'] != 0.0: count_time *= params['scaler_prefactor']
+            return self.updateState({'result': self.Count(-1.0 * count_time)} )
         elif params['scaler_gating_mode'] == 'NEUT':
-            return self.updateState({'result': self.Count(params['scaler_monitor_preset'])} )
+            monitor_target = params['scaler_monitor_preset']
+            if 'scaler_prefactor' in params and params['scaler_prefactor'] != 0.0: monitor_target *= params['scaler_prefactor']
+            return self.updateState({'result': self.Count(monitor_target)} )
         
     def scanGenerator(self, scan_definition, extra_dicts = []):
         scan_state = {}
