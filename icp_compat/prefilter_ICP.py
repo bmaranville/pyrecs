@@ -330,6 +330,23 @@ class ICPArgKeywordCommands(ICPCommandList):
                 regexp += self.END
                 self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)
 
+class ICPStringArgCommands(ICPCommandList):
+    """ command that takes an arbitrary string as input.
+    e.g. rsf and drsf """
+    extra_args = ''
+    def recompile_commands(self):
+        self.commands_compiled = {}
+        for numarg in self.commands.keys():
+            cmds = self.commands[numarg]
+            if len(cmds) > 0:
+                regexp = r'[ \t]*(' + r'|'.join(cmds) + r')'
+                if numarg > 0:
+                    regexp += r'[ \t]*[,=]?[ \t]*'
+                    regexp += self.SEP.join([self.FP_REGEXP,] * numarg)
+                regexp += '(?:' + self.SEP + r'([a-z0-9\._]+))*'
+                regexp += self.END
+                self.commands_compiled[numarg]=re.compile(regexp, re.IGNORECASE)
+
 class ICPTransformer(object):
     """IPython command line transformer that recognizes and replaces ICP
     commands.
@@ -354,7 +371,8 @@ class ICPTransformer(object):
         self.increment_commands = ICPIncrementCommands(rootname=rootname)
         self.tied_commands = ICPTiedCommands(rootname=rootname)
         self.arg_kw_commands = ICPArgKeywordCommands(rootname=rootname)
-        self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands, self.arg_kw_commands]
+        self.stringarg_commands = ICPStringArgCommands(rootname=rootname)
+        self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands, self.arg_kw_commands, self.stringarg_commands]
     
     def register_icp_conversions(self, icp_conversions):
         """ take a dict of 'arg_commands': {'....'} ... and register all """

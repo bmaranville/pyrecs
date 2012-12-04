@@ -576,7 +576,7 @@ class InstrumentController:
         # first grab the motors and collimation etc. from the backend
         self.state.update(self.ip.getState())
         # then augment the state definition with stuff only the InstrumentController knows
-        self.state.setdefault('scaler_gating_mode', "'TIME'")
+        self.state.setdefault('scaler_gating_mode', 'TIME')
         self.state.setdefault('scaler_time_preset', 1.0)
         self.state.setdefault('scaler_monitor_preset', 1000)
         #self.state.setdefault('polarization_enabled', self.polarization_enabled)
@@ -602,7 +602,7 @@ class InstrumentController:
     
     def GetCountSettings(self, scaler_name):
         counter_state = {
-            'scaler_gating_mode': self.state.get('scaler_gating_mode', "'TIME'"),
+            'scaler_gating_mode': self.state.get('scaler_gating_mode', 'TIME'),
             'scaler_time_preset': self.state.get('scaler_time_preset', 1.0),
             'scaler_monitor_preset': self.state.get('scaler_monitor_preset', 1000) }
         return counter_state
@@ -1308,8 +1308,8 @@ class InstrumentController:
         #scan_definition['vary'] = OrderedDict(scan_definition['vary'])
         #scan_definition['init_state'] = OrderedDict(scan_definition['init_state'])
         scan_definition.setdefault('namestr', self.ip.GetNameStr().upper())
-        state_now = self.getState(poll=True)
-        new_state = state_now.update(OrderedDict(scan_definition['init_state']))
+        new_state = deepcopy(self.getState(poll=True))
+        new_state.update(OrderedDict(scan_definition['init_state']))
         for pub in publishers:
             pub.publish_start(new_state, scan_definition)
         iterations = scan_definition['iterations']
@@ -1346,8 +1346,9 @@ class InstrumentController:
             ##############################################
             for d in scan_expr:
                 scan_state[d] = eval(str(scan_expr[d]), context, scan_state)
-                
-            new_state = self.updateState(scan_state.copy())
+            
+            self.updateState(OrderedDict(scan_definition['init_state'])) # load all the initial states!    
+            new_state = self.updateState(scan_state.copy()) # load all the varying states
             output_state = self.measure(new_state)
             result = output_state['result']
             scan_state['result'] = output_state['result'].copy()

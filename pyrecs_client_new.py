@@ -329,7 +329,8 @@ def register_prefilter_commands(icp_conversion_table):
 def get_cmds():
     #icp_conversions = ic.GetICPConversions()
     if DEBUG: print "icp_conversions: ", icp_conversions
-    register_prefilter_commands(icp_conversions)
+    prefilter_ICP.icpt.register_icp_conversions(icp_conversions)
+    #register_prefilter_commands(icp_conversions)
 
 if DEBUG: print "ready to roll..."
 get_cmds()

@@ -46,4 +46,8 @@ ICP_CONVERSIONS = {
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotorTied'},
         'fp': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeakTied'}
     },
+    
+    'stringarg_commands': {
+        'rsf': { 'numargs': [0], 'pyrecs_cmd': 'RunICPSequenceFile'},
+    },
 }
