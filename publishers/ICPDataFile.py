@@ -138,9 +138,9 @@ class ICPDataFile:
         header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
         header += '%50s ' % (description,)
         if polarized_beam: 
-            flipper1state = 'OFF' # to be implemented
-            flipper2state = 'ON ' # to be implemented
-            header += 'F1: %3s  F2: %3s  \n' % (flipper1state, flipper2state)
+            flipper1 = 'OFF' # to be implemented
+            flipper2 = 'ON ' # to be implemented
+            header += 'F1: %3s  F2: %3s  \n' % (flipper1, flipper2)
         else: 
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
@@ -215,11 +215,19 @@ class ICPDataFile:
         header = "'%12s' '%17s' %6s%8.f.%5i  '%4s'%5i  '%3s'\n" % (filename, timestr, tstring, monitor, prefactor, count_type, numpoints, ttype)
         header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
         header += '%50s ' % (description,)
-        if (params['flipper1state'] is not None) or (params['flipper2state'] is not None): 
+        if (params['flipper0'] is not None) or (params['flipper1'] is not None): 
             #flipper1state = 'OFF' # to be implemented
             #flipper2state = 'ON ' # to be implemented
             # flipperstate should be 'OFF' or 'ON '
-            header += 'F1: %3s  F2: %3s  ' % (params['flipper1state'], params['flipper2state'])
+            if params.get('flipper0', None) is True:
+                f0 = "ON "
+            else: 
+                f0 = "OFF"
+            if params.get('flipper1', None) is True:
+                f1 = "ON "
+            else: 
+                f1 = "OFF"
+            header += 'F1: %3s  F2: %3s  ' % (f0, f1)
         header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
         header += ' %7.4f    %8.5f %7.5f %9.5f %4i ' % (wavelength, tstart, tincr, hfield, num_detectors)
@@ -299,10 +307,10 @@ class ICPDataFile:
         flipper2_strpos = flipper_defs.find('F2: ')
         if flipper1_strpos > -1:
             sp = flipper1_strpos + 4 # move to end of 'F1: '
-            params['flipper1state'] = flipper_defs[sp : sp+3]
+            params['flipper1'] = flipper_defs[sp : sp+3]
         if flipper1_strpos > -1:
             sp = flipper2_strpos + 4
-            params['flipper2state'] = flipper_defs[sp : sp+3]
+            params['flipper2'] = flipper_defs[sp : sp+3]
         
         collim = [0,0,0,0]
         mosaic = [0,0,0]  
@@ -358,8 +366,8 @@ class ICPDataFile:
         'wavelength': 5.00,
         'magnet_defined': False,
         'temp_controller_defined': False,
-        'flipper1state': 0, # off
-        'flipper2state': 0, # off
+        'flipper1': False, # off
+        'flipper2': False, # off
         }
              
     def GenerateHeader(self, state = {}, scan_def = {}):
@@ -409,7 +417,7 @@ class ICPDataFile:
         header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
         header += '%50s ' % (description,)
         if polarized_beam: 
-            header += 'F1: %3s  F2: %3s  \n' % (params['flipper1state'], params['flipper2state'])
+            header += 'F1: %3s  F2: %3s  \n' % (params['flipper1'], params['flipper2'])
         else: 
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])

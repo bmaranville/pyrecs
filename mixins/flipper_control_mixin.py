@@ -24,6 +24,8 @@ ICP_CONVERSIONS = {
         'iget': { 'numargs': [1], 'pyrecs_cmd': 'iget' },
         'vget': { 'numargs': [1], 'pyrecs_cmd': 'vget' },
         'iscan': { 'numargs': [4,5], 'pyrecs_cmd': 'IScan' },
+        'flm': {'numargs': [0], 'pyrecs_cmd': 'getFlipperMonochromator'},
+        'fla': {'numargs': [0], 'pyrecs_cmd': 'getFlipperAnalyzer'}
     },
         
     'en_dis_commands': {
@@ -76,7 +78,10 @@ class FlipperControlMixin:
         
         # hook into the IC device registry:
         self.device_registry.update( {'ps':
-                                {'names': self.ps_names, 'updater': self.setCurrentByName, 'getter': self.getCurrentByName }} )
+                                            {'names': self.ps_names, 'updater': self.setCurrentByName, 'getter': self.getCurrentByName },
+                                      'flippers':
+                                            {'names': ['flipper0', 'flipper1'], 'updater': self.setFlipperByName, 'getter': None}
+                                      } )
         self.icp_conversions = update(self.icp_conversions, ICP_CONVERSIONS)
     
     def PrintFlipperCalibration(self, ps_num = None):
@@ -115,6 +120,11 @@ class FlipperControlMixin:
         self.setFlipper(0, enable)
     def setFlipperAnalyzer(self, enable):
         self.setFlipper(1, enable)
+        
+    def getFlipperMonochromator(self):
+        return self.state.get('flipper0', False)
+    def getFlipperAnalyzer(self):
+        return self.state.get('flipper1', False)
     
     def setFlipper(self, flippernum, enable):
         """ flippers are numbered... flipper 0 is monochromator, flipper 1 is at analyzer usually
@@ -130,7 +140,7 @@ class FlipperControlMixin:
         else:
             self.flipper_ps[ps_num].setCurrent(0.0)
             self.flipper_ps[ps_num+1].setCurrent(0.0)
-        self.state['flipper%dstate' % flippernum] = enable
+        self.state['flipper%d' % flippernum] = enable
         
     def getFlippingRatio(self, flippernum, duration):
         """ flippers are numbered... flipper 0 is monochromator, flipper 1 is at analyzer usually
@@ -166,11 +176,11 @@ class FlipperControlMixin:
     def getAnaFlippingRatio(self, duration):
         self.getFlippingRatio(1, duration)
             
-    def setFlipperByName(self, flippernames, enable):
+    def setFlipperByName(self, flippernames, enable_list):
         id_len = len('flipper')
-        for flippername in flippernames:
+        for flippername, en in zip(flippernames, enable_list):
             flippernum = int(flippername[id_len:])
-            self.setFlipper(flippernum, enable)
+            self.setFlipper(flippernum, en)
     
     def setCurrentByName(self, ps_names, currents):
         ps_nums = [self.ps_lookup[pn] for pn in ps_names]

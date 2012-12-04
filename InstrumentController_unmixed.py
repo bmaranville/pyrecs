@@ -586,7 +586,8 @@ class InstrumentController:
         for groupname in self.device_registry:
             device_group = self.device_registry[groupname]
             for devicename in device_group['names']:
-                self.state.update({devicename: device_group['getter'](devicename, poll=poll)})
+                if device_group['getter'] is not None:
+                    self.state.update({devicename: device_group['getter'](devicename, poll=poll)})
         self.state.setdefault('project_path', self.datafolder)
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
@@ -1631,7 +1632,7 @@ class InstrumentController:
             
         scan_definition = {'namestr': self.ip.GetNameStr(), 
                            'comment': ibuf.data['description'],
-                           'iterations': ibuf.data['numpoints'],
+                           'iterations': int(ibuf.data['numpoints']),
                            'init_state': init_state,
                            'vary': scan_expr }
         
@@ -1655,6 +1656,7 @@ class InstrumentController:
                     new_scan_def['filename'] = self.getNextFilename(file_seedname, s)
                     new_scan_def['namestr'] = s[-3:].upper()
                     new_scan_def['init_state'].extend([('flipper1', p[0]), ('flipper2', p[1])])
+                    new_scan_def['vary'].extend([('flipper1', p[0]), ('flipper2', p[1])])
                     scan_defs.append(new_scan_def)
                     # this changes, for example, cg1 to ca1, cb1 etc. and ng1 to na1...
         else:
@@ -1666,68 +1668,8 @@ class InstrumentController:
         
     def RunIBuffer(self, bufnum):
         """ Execute the scan defined in the IBUFFER with number bufnum """
-        ################################################
-        ### THIS HAS NOT BEEN DEBUGGED OR TESTED YET ###
-        ################################################
-        state = self.getState()
-        ibuffer_obj = ibuffer.IBUFFER(project_path = state['project_path'])
-        # loads buffers from default file location
-        if (bufnum <= 0) or (bufnum > len(ibuffer_obj.buffers)):
-            print "error: ibuffer number out of range"
-            return
-        ibuf = ibuffer_obj.buffers[bufnum-1]
-        
-        if ibuf.data['Type'] == 'NEUT':
-            init_state = [ ('scaler_gating_mode', 'NEUT'), ('scaler_monitor_preset', ibuf.data['monit'] ) ]
-        else: # data['Type'] == 'TIME':
-            init_state = [ ('scaler_gating_mode', 'TIME'), ('scaler_time_preset', ibuf.data['monit'] ) ]
-        init_state.append(('scaler_prefactor', ibuf.data['Prefac']))
-        #IBUFFERS only move motors 1-6
-        motnums = set(range(1,7))
-        scan_expr = []
-        for motnum in range(1,7):
-            motstart = ibuf.data['a%dstart' % motnum]
-            motstep = ibuf.data['a%dstep' % motnum]
-            motname = 'a%d' % motnum
-            init_state.append((motname, '%f' % motstart))
-            if motstep > FLOAT_ERROR: # floating-point errors!
-                scan_expr.append((motname, '%f + (i * %f)' % (motstart, motstep)))
-        scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
-        scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
-            
-        scan_definition = {'namestr': self.ip.GetNameStr(), 
-                           'comment': ibuf.data['description'],
-                           'iterations': ibuf.data['numpoints'],
-                           'init_state': init_state,
-                           'vary': scan_expr }
-        
-        file_seedname = ibuf.data['description'][:5]
-        #scan_definition['ibuf_data'] = deepcopy(ibuf.data)
-            
-        generic_suffix = '.' + self.ip.GetNameStr().lower()
-        ibuf_pol_flags = [ ibuf.data['p1exec'], ibuf.data['p2exec'], ibuf.data['p3exec'], ibuf.data['p4exec'] ]
-        pol_states = []
-        pol_defined = any(ibuf_pol_flags)
-        
-        scan_defs = []
-        if pol_defined and self.polarization_enabled:
-            scan_definition['polarization_enabled'] = True
-            identifiers = ['a', 'b', 'c', 'd']
-            suffixes = [generic_suffix[:-2] + ident + generic_suffix[-1] for ident in identifiers]
-            possible_pol_states = [ [False,False], [True,False], [False,True], [True,True] ]
-            for s, p, f in zip(suffixes, possible_pol_states, ibuf_pol_flags):
-                if f > 0:
-                    new_scan_def = deepcopy(scan_definition)
-                    new_scan_def['filename'] = self.getNextFilename(file_seedname, s)
-                    new_scan_def['namestr'] = s[-3:].upper()
-                    new_scan_def['init_state'].extend([('flipper1', p[0]), ('flipper2', p[1])])
-                    scan_defs.append(new_scan_def)
-                    # this changes, for example, cg1 to ca1, cb1 etc. and ng1 to na1...
-        else:
-            # if there's no polarization defined, or if it's overriden by the "polarization_enabled" flag set to false
-            new_scan_def = scan_definition.copy()
-            new_scan_def['filename'] = self.getNextFilename(file_seedname, generic_suffix)
-            scan_defs.append(new_scan_def)
+        polarization_enabled = self.polarization_enabled
+        scan_defs = self.IBufferToScan(bufnum, polarization_enabled)
             
         publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]         
         scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [] ) for scan_def in scan_defs]
