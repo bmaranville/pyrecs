@@ -207,7 +207,8 @@ class ICPCommandList(object):
     END = r'[ \t]*$'
     extra_args = ''
     
-    def __init__(self):
+    def __init__(self, rootname=''):
+        self.rootname = rootname
         self.clear_all()
     
     def clear_all(self):
@@ -225,7 +226,7 @@ class ICPCommandList(object):
                 match_found = True
                 groups = match.groups()
                 self.groups = groups
-                cmd = 'ic.' + self.command_conversion[groups[0]] + '('
+                cmd = self.rootname + self.command_conversion[groups[0]] + '('
                 for group in groups[1:numarg+1]:
                     if group: 
                         if group == '+' or group == '*': # this is an enable command
@@ -341,19 +342,29 @@ class ICPTransformer(object):
     
     # XXX: inheriting from PrefilterTransformer as documented gives TypeErrors,
     # but apparently is not needed after all
-    def __init__(self):
+    def __init__(self, rootname=''):
+        self.rootname = rootname
         self.priority = 99
         self.enabled = True
         self.log_unfiltered = False
         self.ic = None
         
-        self.arg_commands = ICPCommandList()
-        self.en_dis_commands = ICPEnableDisableCommands()
-        self.increment_commands = ICPIncrementCommands()
-        self.tied_commands = ICPTiedCommands()
-        self.arg_kw_commands = ICPArgKeywordCommands()
+        self.arg_commands = ICPCommandList(rootname=rootname)
+        self.en_dis_commands = ICPEnableDisableCommands(rootname=rootname)
+        self.increment_commands = ICPIncrementCommands(rootname=rootname)
+        self.tied_commands = ICPTiedCommands(rootname=rootname)
+        self.arg_kw_commands = ICPArgKeywordCommands(rootname=rootname)
         self.icp_commands = [self.arg_commands, self.en_dis_commands, self.increment_commands, self.tied_commands, self.arg_kw_commands]
     
+    def register_icp_conversions(self, icp_conversions):
+        """ take a dict of 'arg_commands': {'....'} ... and register all """
+        for key in icp_conversions:
+            subcmds = icp_conversions[key]
+            cmd_list = getattr(self, key)
+            for cmdname in subcmds:
+                cmd_info = subcmds[cmdname]
+                cmd_list.add(cmdname, cmd_info['numargs'], cmd_info['pyrecs_cmd'])
+                  
     def transform(self, line, continue_prompt):
         """Alternate prefilter for ICP-formatted commands """
         prefiltered_cmds = ''
@@ -386,7 +397,7 @@ class ICPTransformer(object):
         
         return line
         
-icpt = ICPTransformer()
+icpt = ICPTransformer(rootname='ic.')
 
 def prefilter_ICP(self,line,continuation):
     """Alternate prefilter for ICP-formatted commands """

@@ -30,7 +30,6 @@ from pyrecs.publishers import update_xpeek
 from pyrecs.publishers import ICPDataFile, publisher
 from pyrecs.publishers.gnuplot_publisher import GnuplotPublisher
 
-
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
 AUTO_MOTOR_DISABLE = True
@@ -1558,14 +1557,17 @@ class InstrumentController:
         return self.dataOutput.GenerateIBufferHeader(bufnum)
     
     def RunICPSequenceFile(self, filename, datafolder = None):
+        from pyrecs.icp_compat.prefilter_ICP import ICPTransformer
+        icpt = ICPTransformer('self.')
+        icpt.register_icp_conversions(self.icp_conversions)
         if datafolder is None:
             datafolder = self.datafolder
         icp_seq = PyICPSequenceFile(os.path.join(datafolder, filename))
         for command in icp_seq:
             if self._aborted: break
-            filtered_command = prefilterICPString(command)
+            filtered_command = icpt.transform(command, '')
             self.write('Sequence: ' + filtered_command + '\n')
-            eval(filtered_command, self.__dict__)
+            eval(filtered_command, locals())
     
     def CreateSequence(self, sequence_string):
         self.sequence = StringIO(sequence_string)
