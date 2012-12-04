@@ -1308,7 +1308,8 @@ class InstrumentController:
         #scan_definition['vary'] = OrderedDict(scan_definition['vary'])
         #scan_definition['init_state'] = OrderedDict(scan_definition['init_state'])
         scan_definition.setdefault('namestr', self.ip.GetNameStr().upper())
-        new_state = self.updateState(OrderedDict(scan_definition['init_state']))
+        state_now = self.getState(poll=True)
+        new_state = state_now.update(OrderedDict(scan_definition['init_state']))
         for pub in publishers:
             pub.publish_start(new_state, scan_definition)
         iterations = scan_definition['iterations']
@@ -1656,7 +1657,7 @@ class InstrumentController:
                     new_scan_def['filename'] = self.getNextFilename(file_seedname, s)
                     new_scan_def['namestr'] = s[-3:].upper()
                     new_scan_def['init_state'].extend([('flipper1', p[0]), ('flipper2', p[1])])
-                    new_scan_def['vary'].extend([('flipper1', p[0]), ('flipper2', p[1])])
+                    #new_scan_def['vary'].extend([('flipper1', p[0]), ('flipper2', p[1])])
                     scan_defs.append(new_scan_def)
                     # this changes, for example, cg1 to ca1, cb1 etc. and ng1 to na1...
         else:
