@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 import rs232gpib
 from magnet_controller import MagnetController
+import serial
 DEBUG=True
 
 class Lakeshore421(MagnetController):
@@ -15,7 +17,7 @@ class Lakeshore421(MagnetController):
             'serial_port': dict([('/dev/ttyUSB%d' % i, 'Serial port %d' % (i+1)) for i in range(4, 16)]),
             }
 	self.setCommunications()
-	self.field_multipliers = {'μ': 1e-6, 'm': 1e-3, '': 1.0, 'k': 1e3}
+	self.field_multipliers = {'μ': 1e-6, 'm': 1e-3, ' ': 1.0, 'k': 1e3}
 
     
     def updateSettings(self, keyword, value):
@@ -29,18 +31,20 @@ class Lakeshore421(MagnetController):
             return self.receiveReply()
             
     def receiveReply(self):
-        reply = self.serial.readline()
+        reply = self.serial.readline().rstrip('\r\n')
         return reply
     
     
     def setCommunications(self, comm_mode=None, serial_port=None, gpib_addr=None, serial_to_gpib_port=None):
         if serial_port is None:
             serial_port = self.settings['serial_port']
-        self.serial = serial.Serial(self.settings['serial_port'], 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)    
+        # serial port settings are a bit odd: 9660, 'O', 7, 1
+        self.serial = serial.Serial(self.settings['serial_port'], 9600, bytesize=7, parity='O', rtscts=False, xonxoff=False, timeout=2)    
         
     def getField(self):
         value = self.getFieldValue()
-        multiplier = self.getFieldMulitplier()       
+        multiplier = self.getFieldMultiplier()
+        return value * multiplier    
         
     def getFieldString(self):
         field = self.getField()
@@ -62,6 +66,6 @@ class Lakeshore421(MagnetController):
     def getFieldMultiplier(self):
         self.sendCommand('FIELDM?')
         m = self.receiveReply()
-        return self.field_multpliers[m]
+        return self.field_multipliers[m]
         
         

@@ -1248,7 +1248,13 @@ class InstrumentController:
         else: 
             self._tc[0].setTemp(temperature)
             
-        
+    def PrintField(self):
+        if len(self._magnet) < 1: 
+            self.write("No magnet controllers defined")
+        else:
+            for i, mc in enumerate(self._magnet):
+                self.write('magnet controller %d: %s' % (i+1, mc.getFieldString()))
+                
     def PrintLowerLimits(self):
         result = self.ip.GetLowerLimits()
         for i in self.motor_numbers:

@@ -6,4 +6,5 @@ temperature_controllers = [
     
 magnet_controllers = [
     ['Sorensen DCS 60', 'SorensenDCS60', 'Sorensen'],
-    ['Hewlett-Packard 6632B', 'hp_6632b', 'HP6632B'] ]
+    ['Hewlett-Packard 6632B', 'hp_6632b', 'HP6632B'],
+    ['Lakeshore 421 Gaussmeter', 'Lakeshore_421', 'Lakeshore421'] ]

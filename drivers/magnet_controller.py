@@ -25,6 +25,8 @@ class MagnetController(object):
         self.setCurrent(field)
     def getField(self):
         return self.getCurrent()
+    def getFieldString(self):
+        return '%.4f A' % (self.getField())
         
     def getSettings(self):
         return self.settings
@@ -46,10 +48,10 @@ class MagnetController(object):
         self.settings[keyword] = value
         # override if you need more than this.
         
-    def getCurrent(self, sensor=None):
+    def getCurrent(self):
         pass
     
-    def getVoltage(self, temp):
+    def getVoltage(self):
         pass
         
     def setCurrent(self, current):
