@@ -416,8 +416,9 @@ class ICPDataFile:
         header = "'%12s' '%17s' %6s%8.f.%5i  '%4s'%5i  '%3s'\n" % (filename, timestr, tstring, monitor, prefactor, count_type, numpoints, ttype)
         header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
         header += '%50s ' % (description,)
+        flipper_state_string = {True: 'ON ', False: 'OFF'}
         if polarized_beam: 
-            header += 'F1: %3s  F2: %3s  \n' % (params['flipper1'], params['flipper2'])
+            header += 'F1: %3s  F2: %3s  \n' % (flipper_state_string[params['flipper1']], flipper_state_string[params['flipper2']])
         else: 
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])

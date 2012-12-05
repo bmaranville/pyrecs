@@ -84,7 +84,7 @@ class xpeek_broadcast:
         self.npts = npts
         self.filename = filename
         outstr = ''
-        outstr += self.instrument_name + ':START\t'
+        outstr += namestr + ':START\t'
         outstr += 'NPTS=% 10d\t' % npts
         outstr += 'FILE=%s\t' % filename
         outstr += 'VARY='
