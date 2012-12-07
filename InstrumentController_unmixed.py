@@ -531,7 +531,7 @@ class InstrumentController:
             mc.setField(field)
             
     def GetMagnetByName(self, mc_name, poll=False):
-        mcnum = int(mcname[1:])
+        mcnum = int(mc_name[1:])
         if poll==True:
             field = self._magnet[mcnum].getField()
             self.state[mc_name] = field
@@ -593,11 +593,11 @@ class InstrumentController:
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
         self.state['magnet_defined'] = (len(self._magnet) > 0)
-        for i, mc in enumerate(self._magnet):
-            self.state['h%d' % (i+1)] = mc.getField()
+        #for i, mc in enumerate(self._magnet):
+        #    self.state['h%d' % (i+1)] = mc.getField()
         self.state['temp_controller_defined'] = len(self._tc) > 0
-        for i, tc in enumerate(self._tc):
-            self.state['t%d' % (i+1)] = tc.getTemp()
+        #for i, tc in enumerate(self._tc):
+        #    self.state['t%d' % (i+1)] = tc.getTemp()
         self.state['timestamp'] = time.time()
         return self.state.copy()
     
@@ -1640,12 +1640,12 @@ class InstrumentController:
                 
         if ibuf.data['IncT'] > FLOAT_ERROR:
             scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
-        else: 
+        elif state.get('magnet_defined', False) == True: 
             init_state.append(('t0', ibuf.data['T0']))
             
         if ibuf.data['Hinc'] > FLOAT_ERROR:
             scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
-        else:
+        elif state.get('temp_controller_defined', False) == True:
             init_state.append(('h0', ibuf.data['H0']))
             
         scan_definition = {'namestr': self.ip.GetNameStr(), 
