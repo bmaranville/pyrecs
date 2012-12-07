@@ -55,8 +55,8 @@ class FlipperControlMixin:
     """
     
     def __init__(self):
-        #term_line = int(self.ip.InstrCfg['mag_line'])
-        term_line = 4
+        term_line = int(self.ip.InstrCfg['term_line,'])
+        #term_line = 4
         if self.gpib is None:
             self.gpib = RS232GPIB(serial_port = self.ip.GetSerialPort(term_line)) # initialize our gpib controller
         #num_flipper_ps = len(self.ip.GetFcal())
