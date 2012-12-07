@@ -1,7 +1,7 @@
 import serial
 from numpy import abs
 import time
-import rs232GPIB
+import rs232gpib
 GPIB_ADDR = 7 # this is the current address for Sorensen at AND/R
 
 class Sorensen:
@@ -13,7 +13,7 @@ class Sorensen:
             self.sendCommand = self.sendSerialCommand
             self.receiveReply = self.receiveSerialReply
         else: # gpib mode
-            self.gpib = rs232GPIB.rs232GPIB()
+            self.gpib = rs232gpib.RS232GPIB()
             self.gpib_addr = gpib_addr
             self.sendCommand = self.sendGPIBCommand
             self.receiveReply = self.receiveGPIBReply
@@ -22,6 +22,7 @@ class Sorensen:
         self.curr_change_rate = 1.0 #amps/second
         self.voltage = None
         self.current = None
+        self.check_errors = False
 
     def sendSerialCommand(self, command = None, reply_expected = False):
         if not command:
@@ -73,25 +74,28 @@ class Sorensen:
                 self.sendCommand(command, reply_expected = False)
 
     def GetVoltageSetpoint(self):
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         reply_str = self.sendCommand('SOUR:VOLT?', reply_expected = True)
         self.voltage_setp = float(reply_str)
         return self.voltage_setp
         
     def GetCurrentSetpoint(self):
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        #self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         reply_str = self.sendCommand('SOUR:CURR?', reply_expected = True)
         self.current_setp = float(reply_str)
         return self.current_setp
         
     def GetVoltageMeasured(self):
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        #self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         reply_str = self.sendCommand('MEAS:VOLT?', reply_expected = True)
         self.voltage_meas = float(reply_str)
         return self.voltage_meas
   
     def GetCurrentMeasured(self):
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        #self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         reply_str = self.sendCommand('MEAS:CURR?', reply_expected = True)
         self.current_meas = float(reply_str)
         return self.current_meas   
@@ -103,7 +107,7 @@ class Sorensen:
         t_change = diff / self.volt_change_rate
         t_change_str = '%.3f' % t_change
         print 'SOUR:VOLT:RAMP ' + voltage_str + ' ' + t_change_str
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         self.sendCommand('SOUR:VOLT:RAMP ' + voltage_str + ' ' + t_change_str, reply_expected = False)
         time.sleep(t_change)
         return
@@ -115,12 +119,12 @@ class Sorensen:
         t_change = diff / self.curr_change_rate
         t_change_str = '%.3f' % t_change
         print('SOUR:CURR:RAMP ' + curr_str + ' ' + t_change_str)
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         self.sendCommand('SOUR:CURR:RAMP ' + curr_str + ' ' + t_change_str, reply_expected = False)
         time.sleep(t_change)
         return
         
     def MakeLocal(self):
-        self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
         self.sendCommand('SYST:LOCAL ON', reply_expected = False)
         
