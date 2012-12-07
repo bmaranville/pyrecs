@@ -14,7 +14,7 @@ class GnuplotPublisher(Publisher):
         self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
         (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
         
-    def publish_datapoint(self, state, scan_def):
+    def publish_datapoint(self, state, scan_def, **kwargs):
         outstr = ''
         col=1
         for movable in OrderedDict(scan_def['vary']):
@@ -32,7 +32,7 @@ class GnuplotPublisher(Publisher):
         else:
             self.plot.stdin.write('plot \'%s\' u 1:%d title \'%s\' lt 2 ps 3 pt 7 lc rgb "red"\n' % (self.tmp_path,counts_col,title))
         
-    def publish_end(self, state, scan_def):
+    def publish_end(self, state, scan_def, **kwargs):
         counts_col = len(scan_def['vary']) + 1
         title = scan_def['filename']
         if state.has_key('result') and state['result'].has_key('fit_result'):

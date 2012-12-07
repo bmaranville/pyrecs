@@ -1304,7 +1304,7 @@ class InstrumentController:
             yield scan_state.copy()
                 
     """ rewrite FindPeak as generic scan over one variable, publishing to XPeek and File, using Fitter """
-    def oneDimScan(self, scan_definition, publishers = [], extra_dicts = [], publish_end=True):
+    def oneDimScan(self, scan_definition, publishers = [], extra_dicts = [], publish_end=True, publish_time=False):
         """ the basic unit of instrument control:  
         initializes the instrument to some known state (scan_definition['init_state']), 
         publishes the start (to files, xpeek, etc in publishers)
@@ -1371,8 +1371,13 @@ class InstrumentController:
             self.write(out_str)
                 
             # publish datapoint
+            reported_count_time = None
+            if publish_time:
+                reported_count_time = result['count_time'] / 60000.0 # from milliseconds to minutes
+                
             for pub in publishers:
-                pub.publish_datapoint(output_state, scan_definition)
+                pub.publish_datapoint(output_state, scan_definition, count_time=reported_count_time)
+
             all_states.append(scan_state)
             yield output_state, scan_state
         
@@ -1685,7 +1690,7 @@ class InstrumentController:
         scan_defs = self.IBufferToScan(bufnum, polarization_enabled)
             
         publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]         
-        scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [] ) for scan_def in scan_defs]
+        scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [], publish_time=True ) for scan_def in scan_defs]
 
         locked_scans = itertools.izip_longest(*scans) #joins the scans so it steps through them all at the same time
         for scan_step in locked_scans:

@@ -1,4 +1,5 @@
 import socket
+import os
 from publisher import Publisher
 #bcast_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #host = '129.6.121.255'
@@ -13,19 +14,20 @@ class XPeekPublisher(Publisher):
 
     def publish_start(self, state, scan_def):
         vary_dict = OrderedDict(scan_def['vary'])
+        full_filename = os.path.join(state['project_path'], scan_def['filename'])
         if scan_def['comment'] == 'Find_Peak':
-            self.broadcaster.new_findpeak(scan_def['iterations'], scan_def['filename'], vary_dict.keys(), scan_def['namestr'])
+            self.broadcaster.new_findpeak(scan_def['iterations'], full_filename, vary_dict.keys(), scan_def['namestr'])
         else:
-            self.broadcaster.new_data(scan_def['iterations'], scan_def['filename'], vary_dict.keys(), scan_def['comment'], scan_def['namestr'])
+            self.broadcaster.new_data(scan_def['iterations'], full_filename, vary_dict.keys(), scan_def['comment'], scan_def['namestr'])
     
-    def publish_datapoint(self, state, scan_def):
+    def publish_datapoint(self, state, scan_def, count_time=None):
         """ called to record a new datapoint """
         vary = OrderedDict(scan_def['vary']).keys()
         position = [state[d] for d in vary]
         counts = state['result']['counts']
         pointnum = state['i'] + 1
         instrument_name = scan_def['namestr']
-        self.broadcaster.new_point(position, counts, pointnum, vary, instrument_name)
+        self.broadcaster.new_point(position, counts, pointnum, vary, instrument_name, count_time)
     
     def publish_end(self, state, scan_def):
         """ called when measurement complete - archive finished """
@@ -40,15 +42,15 @@ class XPeekPublisher(Publisher):
             # and we set them explicitly to 0:
             fit_params = [fit_params[0], 0.0, 0.0, fit_params[1], fit_params[2], fit_params[3]]
             converged = True
+            self.broadcaster.end(scan_type, fit_params, converged, namestr=instrument_name)
         elif scan_type == 'ISCAN':
             fit_result = result['fit_result']
             fit_params = [fit_result[fp] for fp in fit_result if (not fp[-4:] == '_err')]
             converged = True
+            self.broadcaster.end(scan_type, fit_params, converged, namestr=instrument_name)
         else :
-            fit_params = []
-            converged = False
-            
-        self.broadcaster.end(scan_type, fit_params, converged, namestr=instrument_name)
+            self.broadcaster.finish(scan_type, namestr=instrument_name)
+
     
 class xpeek_broadcast:
     """ initialize, update and end an xpeek broadcast of a findpeak scan """
@@ -73,7 +75,7 @@ class xpeek_broadcast:
             outstr += '%s ' % str(v).upper()
             #outstr += 'A%02d ' % v
         outstr += '\t'
-        outstr += 'Find_Peak' + '\n'
+        outstr += 'Find_Peak\t' + '\n'
         self.pointnum = 1
         self.broadcast(outstr)
     
@@ -101,7 +103,7 @@ class xpeek_broadcast:
             print outstr
             self.bcast_sock.sendto(outstr, (self.host, self.port))
         
-    def new_point(self, position, counts, pointnum = None, vary = None, instrument_name=None):
+    def new_point(self, position, counts, pointnum = None, vary = None, instrument_name=None, count_time=None):
         if pointnum is None:
             pointnum = self.pointnum
         if vary is None:
@@ -112,8 +114,10 @@ class xpeek_broadcast:
         outstr += instrument_name + ':\t'
         outstr += 'PT=% 10d\t' % pointnum
         for p,v in zip(position, vary):
-            outstr += '%s=%11.3f ' % (str(v).upper(), p)
-        outstr += '\tDATA=% 10d\n' % (counts)
+            outstr += '%s=%11.3f\t' % (str(v).upper(), p)
+        if count_time is not None:
+            outstr += 'M=%7.2f\t' % (count_time)
+        outstr += 'DATA=% 10d\t\n' % (counts)
         self.pointnum = pointnum + 1
         self.broadcast(outstr)
         
@@ -131,7 +135,14 @@ class xpeek_broadcast:
             
         outstr += '\n'
         self.broadcast(outstr)
-
+        
+    def finish(self, scan_type = None, namestr=None):
+        if namestr is None:
+            namestr = self.instrument_name
+        outstr = ''
+        outstr += namestr + ':FINISH\t'            
+        outstr += '\n'
+        self.broadcast(outstr)
 
 #outstr = 'CG1:START\tNPTS=12\tFILE=blah.txt\tVARY=A03\t\'Find_Peak\'\n'
 #bcast_sock.sendto(outstr, (host, port))
