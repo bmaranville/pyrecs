@@ -173,9 +173,9 @@ class FlipperControlMixin:
         return flipping_ratio
     
     def getMonoFlippingRatio(self, duration):
-        self.getFlippingRatio(0, duration)
-    def getAnaFlippingRatio(self, duration):
         self.getFlippingRatio(1, duration)
+    def getAnaFlippingRatio(self, duration):
+        self.getFlippingRatio(2, duration)
             
     def setFlipperByName(self, flippernames, enable_list):
         if DEBUG: print "setting flippers by name!: ", flippernames

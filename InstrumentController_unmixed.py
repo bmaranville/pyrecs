@@ -305,6 +305,7 @@ class InstrumentController:
         #    print "Resuming (Suspend flag cleared)"
         #else:
         #    print "Suspend: program will pause"
+        if not self._suspended: self.write('Suspended - run Suspend() again to resume (ctrl-z)')
         self._suspended = not self._suspended
         
     def Break(self, signum=None, frame=None):
