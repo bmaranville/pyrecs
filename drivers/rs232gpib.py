@@ -62,9 +62,32 @@ class RS232GPIB:
         checksum_maybe = self.serial.readline()
         return result
         
-        
+class RS232GPIB_new(object):
+    """ driver for talking to rs232->GPIB bridge (National Instruments) 
+    designed for device-as-GPIB-controller mode (rs232 from computer, GPIB to instruments)"""
+    # a lot simpler?
+    def __init__(self, serial_port = SER_PORT):
+        self.serial = serial.Serial(serial_port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=2)
+        self.newline_str = '\r'
+        self.session = ''
+        self._isController = False
+    
+    def sendCommand(self, gpib_addr, text_cmd):
+        if not self._isController:
+            self.setAsController()
+            self._isController = True
+        self.serial.write('wr '+str(gpib_addr)+'\n;'+text_cmd+';\r')
+        if DEBUG: self.session += 'wr '+str(gpib_addr)+'\n;'+text_cmd+';\r'
+        self.serial.flush()
+    
+    def receiveReply(self, gpib_addr):
+        self.serial.write('rd #70 '+str(gpib_addr)+'\r')
+        if DEBUG: self.session += 'rd #256 '+str(gpib_addr)+'\n'
+        self.serial.flush()
+        result = self.serial.readline()
+        checksum_maybe = self.serial.readline()
+        return result    
 
-        
 sample_session = """
 sic^Mcmd
 ?^Mcmd

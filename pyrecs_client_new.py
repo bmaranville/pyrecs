@@ -304,32 +304,11 @@ if DEBUG: print "connections restarted."
 #        
 #        self.putline_reverse(mesg)
 
-def register_prefilter_commands(icp_conversion_table):
-    for cmd in icp_conversion_table['arg_commands']:
-        entry = icp_conversion_table['arg_commands'][cmd]
-        prefilter_ICP.icpt.arg_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
-    if DEBUG: print "arg_commands registered"
-    for cmd in icp_conversion_table['en_dis_commands']:
-        entry = icp_conversion_table['en_dis_commands'][cmd]
-        prefilter_ICP.icpt.en_dis_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
-    if DEBUG: print "enable/disable commands registered"
-    for cmd in icp_conversion_table['increment_commands']:
-        entry = icp_conversion_table['increment_commands'][cmd]
-        prefilter_ICP.icpt.increment_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
-    if DEBUG: print "increment commands registered"
-    for cmd in icp_conversion_table['tied_commands']:
-        entry = icp_conversion_table['tied_commands'][cmd]
-        prefilter_ICP.icpt.tied_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
-    if DEBUG: print "tied commands registered"
-    for cmd in icp_conversion_table['arg_kw_commands']:
-        entry = icp_conversion_table['arg_kw_commands'][cmd]
-        prefilter_ICP.icpt.arg_kw_commands.add(cmd, entry['numargs'], entry['pyrecs_cmd'])
-    if DEBUG: print "kw commands registered"
     
 def get_cmds():
     #icp_conversions = ic.GetICPConversions()
     if DEBUG: print "icp_conversions: ", icp_conversions
-    register_prefilter_commands(icp_conversions)
+    prefilter_ICP.icpt.register_icp_conversions(icp_conversions)
 
 if DEBUG: print "ready to roll..."
 get_cmds()

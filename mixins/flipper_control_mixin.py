@@ -2,6 +2,7 @@ from pyrecs.drivers.rs232gpib import RS232GPIB
 from pyrecs.drivers.FlipperDriver import FlipperPS
 import functools
 import collections
+DEBUG = False
 
 def update(d, u):
     """ recursive dictionary update """
@@ -80,7 +81,7 @@ class FlipperControlMixin:
         self.device_registry.update( {'ps':
                                             {'names': self.ps_names, 'updater': self.setCurrentByName, 'getter': self.getCurrentByName },
                                       'flippers':
-                                            {'names': ['flipper0', 'flipper1'], 'updater': self.setFlipperByName, 'getter': None}
+                                            {'names': ['flipper1', 'flipper2'], 'updater': self.setFlipperByName, 'getter': None}
                                       } )
         self.icp_conversions = update(self.icp_conversions, ICP_CONVERSIONS)
     
@@ -117,22 +118,22 @@ class FlipperControlMixin:
         self.ip.SetFcal(ps_num, cur, engy)
     
     def setFlipperMonochromator(self, enable):
-        self.setFlipper(0, enable)
-    def setFlipperAnalyzer(self, enable):
         self.setFlipper(1, enable)
+    def setFlipperAnalyzer(self, enable):
+        self.setFlipper(2, enable)
         
     def getFlipperMonochromator(self):
-        return self.state.get('flipper0', False)
-    def getFlipperAnalyzer(self):
         return self.state.get('flipper1', False)
+    def getFlipperAnalyzer(self):
+        return self.state.get('flipper2', False)
     
     def setFlipper(self, flippernum, enable):
-        """ flippers are numbered... flipper 0 is monochromator, flipper 1 is at analyzer usually
-        flipper 0 has two power supplies (1 and 2), for flipping and compensation
-        flipper 1 also has two (3 and 4)...
+        """ flippers are numbered... flipper 1 is monochromator, flipper 2 is at analyzer usually
+        flipper 1 has two power supplies (1 and 2), for flipping and compensation
+        flipper 2 also has two (3 and 4)...
         this command lights up both power supplies for the given flipper """
         # turn them on one at a time:
-        ps_num = int(flippernum * 2)
+        ps_num = int((flippernum-1) * 2)
         if enable:
             fcals = self.ip.GetFcal()
             self.flipper_ps[ps_num].setCurrent(fcals[ps_num+1]['cur'])  # ignores the 'energy' parameter.  This functionality is broken in ICP at ANDR anyway
@@ -172,11 +173,12 @@ class FlipperControlMixin:
         return flipping_ratio
     
     def getMonoFlippingRatio(self, duration):
-        self.getFlippingRatio(0, duration)
-    def getAnaFlippingRatio(self, duration):
         self.getFlippingRatio(1, duration)
+    def getAnaFlippingRatio(self, duration):
+        self.getFlippingRatio(2, duration)
             
     def setFlipperByName(self, flippernames, enable_list):
+        if DEBUG: print "setting flippers by name!: ", flippernames
         id_len = len('flipper')
         for flippername, en in zip(flippernames, enable_list):
             flippernum = int(flippername[id_len:])

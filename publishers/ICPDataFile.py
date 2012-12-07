@@ -14,7 +14,7 @@ PUBLISH_FITRESULT = True
 
 class ICPFindPeakPublisher(Publisher):
     fileManifest = FileManifest()
-    def publish_start(self, state, scan_def):
+    def publish_start(self, state, scan_def, **kwargs):
         state.setdefault('monitor', 0.0) # typically don't measure monitor before findpeak
         self.fileManifest.publish_start(state, scan_def)
         header = ''
@@ -24,7 +24,7 @@ class ICPFindPeakPublisher(Publisher):
         with open(scan_def['filename'], 'w') as f:
             f.write(header)
             
-    def publish_datapoint(self, state, scan_def):
+    def publish_datapoint(self, state, scan_def, **kwargs):
         outstr = ''
         for movable in OrderedDict(scan_def['vary']):
             #outstr += '%10.4f    ' % state[movable]
@@ -33,7 +33,7 @@ class ICPFindPeakPublisher(Publisher):
         with open(scan_def['filename'], 'a') as f:
             f.write(outstr)
             
-    def publish_end(self, state, scan_def):
+    def publish_end(self, state, scan_def, **kwargs):
         if (PUBLISH_FITRESULT == True) and state['result'].has_key('fit_str'):
             #outstrs = pprint.pformat(state['result']['fit_result'], indent=4).split('\n')
             outstrs = state['result']['fit_str'].split('\n')
@@ -50,7 +50,7 @@ class ICPDataFilePublisher(Publisher):
         self.ICPD = ICPDataFile()
         Publisher.__init__(self)
     
-    def publish_start(self, params, scan_def):
+    def publish_start(self, params, scan_def, **kwargs):
         #if params.get('timestamp') is None:
         #    params['timestr'] = time.strftime('%b %d %Y %H:%M')
         params.setdefault('monitor', 0.0) # typically don't measure monitor before findpeak
@@ -60,10 +60,10 @@ class ICPDataFilePublisher(Publisher):
         with open(scan_def['filename'], 'w') as f:
             f.write(header)
             
-    def publish_datapoint(self, params, scan_def):
+    def publish_datapoint(self, params, scan_def, **kwargs):
         self.ICPD.AddPoint(params, scan_def)
         
-    def publish_end(self, state, scan_def):
+    def publish_end(self, state, scan_def, **kwargs):
         self.fileManifest.publish_filecreation(state, scan_def)
         self.fileManifest.publish_end(state, scan_def)
           
@@ -416,8 +416,9 @@ class ICPDataFile:
         header = "'%12s' '%17s' %6s%8.f.%5i  '%4s'%5i  '%3s'\n" % (filename, timestr, tstring, monitor, prefactor, count_type, numpoints, ttype)
         header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
         header += '%50s ' % (description,)
+        flipper_state_string = {True: 'ON ', False: 'OFF'}
         if polarized_beam: 
-            header += 'F1: %3s  F2: %3s  \n' % (params['flipper1'], params['flipper2'])
+            header += 'F1: %3s  F2: %3s  \n' % (flipper_state_string[params['flipper1']], flipper_state_string[params['flipper2']])
         else: 
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])

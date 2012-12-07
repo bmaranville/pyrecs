@@ -305,6 +305,7 @@ class InstrumentController:
         #    print "Resuming (Suspend flag cleared)"
         #else:
         #    print "Suspend: program will pause"
+        if not self._suspended: self.write('Suspended - run Suspend() again to resume (ctrl-z)')
         self._suspended = not self._suspended
         
     def Break(self, signum=None, frame=None):
@@ -576,7 +577,7 @@ class InstrumentController:
         # first grab the motors and collimation etc. from the backend
         self.state.update(self.ip.getState())
         # then augment the state definition with stuff only the InstrumentController knows
-        self.state.setdefault('scaler_gating_mode', "'TIME'")
+        self.state.setdefault('scaler_gating_mode', 'TIME')
         self.state.setdefault('scaler_time_preset', 1.0)
         self.state.setdefault('scaler_monitor_preset', 1000)
         #self.state.setdefault('polarization_enabled', self.polarization_enabled)
@@ -602,7 +603,7 @@ class InstrumentController:
     
     def GetCountSettings(self, scaler_name):
         counter_state = {
-            'scaler_gating_mode': self.state.get('scaler_gating_mode', "'TIME'"),
+            'scaler_gating_mode': self.state.get('scaler_gating_mode', 'TIME'),
             'scaler_time_preset': self.state.get('scaler_time_preset', 1.0),
             'scaler_monitor_preset': self.state.get('scaler_monitor_preset', 1000) }
         return counter_state
@@ -1248,7 +1249,13 @@ class InstrumentController:
         else: 
             self._tc[0].setTemp(temperature)
             
-        
+    def PrintField(self):
+        if len(self._magnet) < 1: 
+            self.write("No magnet controllers defined")
+        else:
+            for i, mc in enumerate(self._magnet):
+                self.write('magnet controller %d: %s' % (i+1, mc.getFieldString()))
+                
     def PrintLowerLimits(self):
         result = self.ip.GetLowerLimits()
         for i in self.motor_numbers:
@@ -1274,9 +1281,13 @@ class InstrumentController:
         params.setdefault('scaler_time_preset', 1.0)
         params.setdefault('scaler_monitor_preset', 1000)
         if params['scaler_gating_mode'] == 'TIME':
-            return self.updateState({'result': self.Count(-1.0 * params['scaler_time_preset'])} )
+            count_time = params['scaler_time_preset']
+            if 'scaler_prefactor' in params and params['scaler_prefactor'] != 0.0: count_time *= params['scaler_prefactor']
+            return self.updateState({'result': self.Count(-1.0 * count_time)} )
         elif params['scaler_gating_mode'] == 'NEUT':
-            return self.updateState({'result': self.Count(params['scaler_monitor_preset'])} )
+            monitor_target = params['scaler_monitor_preset']
+            if 'scaler_prefactor' in params and params['scaler_prefactor'] != 0.0: monitor_target *= params['scaler_prefactor']
+            return self.updateState({'result': self.Count(monitor_target)} )
         
     def scanGenerator(self, scan_definition, extra_dicts = []):
         scan_state = {}
@@ -1293,7 +1304,7 @@ class InstrumentController:
             yield scan_state.copy()
                 
     """ rewrite FindPeak as generic scan over one variable, publishing to XPeek and File, using Fitter """
-    def oneDimScan(self, scan_definition, publishers = [], extra_dicts = [], publish_end=True):
+    def oneDimScan(self, scan_definition, publishers = [], extra_dicts = [], publish_end=True, publish_time=False):
         """ the basic unit of instrument control:  
         initializes the instrument to some known state (scan_definition['init_state']), 
         publishes the start (to files, xpeek, etc in publishers)
@@ -1308,7 +1319,8 @@ class InstrumentController:
         #scan_definition['vary'] = OrderedDict(scan_definition['vary'])
         #scan_definition['init_state'] = OrderedDict(scan_definition['init_state'])
         scan_definition.setdefault('namestr', self.ip.GetNameStr().upper())
-        new_state = self.updateState(OrderedDict(scan_definition['init_state']))
+        new_state = deepcopy(self.getState(poll=True))
+        new_state.update(OrderedDict(scan_definition['init_state']))
         for pub in publishers:
             pub.publish_start(new_state, scan_definition)
         iterations = scan_definition['iterations']
@@ -1345,8 +1357,9 @@ class InstrumentController:
             ##############################################
             for d in scan_expr:
                 scan_state[d] = eval(str(scan_expr[d]), context, scan_state)
-                
-            new_state = self.updateState(scan_state.copy())
+            
+            self.updateState(OrderedDict(scan_definition['init_state'])) # load all the initial states!    
+            new_state = self.updateState(scan_state.copy()) # load all the varying states
             output_state = self.measure(new_state)
             result = output_state['result']
             scan_state['result'] = output_state['result'].copy()
@@ -1358,8 +1371,13 @@ class InstrumentController:
             self.write(out_str)
                 
             # publish datapoint
+            reported_count_time = None
+            if publish_time:
+                reported_count_time = result['count_time'] / 60000.0 # from milliseconds to minutes
+                
             for pub in publishers:
-                pub.publish_datapoint(output_state, scan_definition)
+                pub.publish_datapoint(output_state, scan_definition, count_time=reported_count_time)
+
             all_states.append(scan_state)
             yield output_state, scan_state
         
@@ -1656,7 +1674,7 @@ class InstrumentController:
                     new_scan_def['filename'] = self.getNextFilename(file_seedname, s)
                     new_scan_def['namestr'] = s[-3:].upper()
                     new_scan_def['init_state'].extend([('flipper1', p[0]), ('flipper2', p[1])])
-                    new_scan_def['vary'].extend([('flipper1', p[0]), ('flipper2', p[1])])
+                    #new_scan_def['vary'].extend([('flipper1', p[0]), ('flipper2', p[1])])
                     scan_defs.append(new_scan_def)
                     # this changes, for example, cg1 to ca1, cb1 etc. and ng1 to na1...
         else:
@@ -1672,7 +1690,7 @@ class InstrumentController:
         scan_defs = self.IBufferToScan(bufnum, polarization_enabled)
             
         publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]         
-        scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [] ) for scan_def in scan_defs]
+        scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [], publish_time=True ) for scan_def in scan_defs]
 
         locked_scans = itertools.izip_longest(*scans) #joins the scans so it steps through them all at the same time
         for scan_step in locked_scans:

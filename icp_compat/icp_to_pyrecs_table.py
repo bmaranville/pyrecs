@@ -4,6 +4,7 @@ ICP_CONVERSIONS = {
         'wl': { 'numargs': [1], 'pyrecs_cmd': 'SetWavelength' },
         'pa': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintMotorPos' },
         'pt': { 'numargs': [0], 'pyrecs_cmd': 'PrintTemperature'},
+        'phf': { 'numargs': [0], 'pyrecs_cmd': 'PrintField'},
         'pu': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintUpperLimits'},
         'pl': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintLowerLimits'},
         'init': { 'numargs': [2], 'pyrecs_cmd': 'SetHardMotorPos'},
@@ -45,5 +46,9 @@ ICP_CONVERSIONS = {
     'tied_commands': {
         'd': { 'numargs': [2], 'pyrecs_cmd': 'DriveMotorTied'},
         'fp': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeakTied'}
+    },
+    
+    'stringarg_commands': {
+        'rsf': { 'numargs': [0], 'pyrecs_cmd': 'RunICPSequenceFile'},
     },
 }
