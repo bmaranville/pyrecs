@@ -216,7 +216,8 @@ class InstrumentController:
         self.cossquared_fitter = FitCosSquaredGnuplot
         self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
-        self.default_publishers = [update_xpeek.XPeekPublisher(), GnuplotPublisher(auto_poisson_errorbars=False)]
+        #self.default_publishers = [update_xpeek.XPeekPublisher(), GnuplotPublisher(auto_poisson_errorbars=False)]
+        self.default_publishers = [update_xpeek.XPeekPublisher()]
         #self.default_publishers = [GnuplotPublisher(auto_poisson_errorbars=False)]
         self.logfilename = self.getNextFilename(time.strftime('%b%d%Y_'), '.LOG')
         self.logwriter = LogWriter(self.logfilename)
@@ -305,7 +306,7 @@ class InstrumentController:
         #    print "Resuming (Suspend flag cleared)"
         #else:
         #    print "Suspend: program will pause"
-        if not self._suspended: self.write('Suspended - run Suspend() again to resume (ctrl-z)')
+        if not self._suspended: self.write('Suspending...')
         self._suspended = not self._suspended
         
     def Break(self, signum=None, frame=None):
@@ -1408,9 +1409,10 @@ class InstrumentController:
         
         return scan_states
                 
-    def RunScan(self, scan_definition, auto_increment_file=True):
+    def RunScan(self, scan_definition, auto_increment_file=True, gnuplot=True):
         """runs a scan_definition with default publishers and FindPeak publisher """
         publishers = self.default_publishers + [publisher.RunScanPublisher()]
+        if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))
         new_scan_def = deepcopy(scan_definition)
         
         if auto_increment_file==True:
@@ -1434,7 +1436,7 @@ class InstrumentController:
         scan_definition = simplejson.loads(open(json_filename,'r').read())
         return self.DryRunScan(scan_definition)
     
-    def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False):
+    def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False, gnuplot=True):
         suffix = '.' + self.ip.GetNameStr().lower()
         if t_scan:
             new_filename = self.getNextFilename('fpt_%s_' % movable, suffix)
@@ -1458,7 +1460,8 @@ class InstrumentController:
                            'init_state': init_state,
                            'vary': scan_expr }
         
-        publishers = self.default_publishers + [ICPDataFile.ICPFindPeakPublisher()]     
+        publishers = self.default_publishers + [ICPDataFile.ICPFindPeakPublisher()]
+        if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))
         #scan = self.OneDimScan(self, scan_definition, publishers = publishers, extra_dict = {} )
         scan = self.oneDimScan(scan_definition, publishers = publishers, extra_dicts = [], publish_end=False)
         self.ResetAbort()
@@ -1633,10 +1636,9 @@ class InstrumentController:
             motstart = ibuf.data['a%dstart' % motnum]
             motstep = ibuf.data['a%dstep' % motnum]
             motname = 'a%d' % motnum
+            init_state.append((motname, '%f' % motstart))
             if motstep > FLOAT_ERROR: # floating-point errors!
                 scan_expr.append((motname, '%f + (i * %f)' % (motstart, motstep)))
-            else:
-                init_state.append((motname, '%f' % motstart))
                 
         if ibuf.data['IncT'] > FLOAT_ERROR:
             scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
@@ -1684,22 +1686,21 @@ class InstrumentController:
             scan_defs.append(new_scan_def)
         return scan_defs
         
-    def RunIBuffer(self, bufnum):
+    def RunIBuffer(self, bufnum, gnuplot=True):
         """ Execute the scan defined in the IBUFFER with number bufnum """
         polarization_enabled = self.polarization_enabled
         scan_defs = self.IBufferToScan(bufnum, polarization_enabled)
-            
-        publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]         
-        scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [], publish_time=True ) for scan_def in scan_defs]
+        
+        scans = []
+        for scan_def in scan_defs:            
+            publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]
+            if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))    
+            scans.append(self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [], publish_time=True ))
 
         locked_scans = itertools.izip_longest(*scans) #joins the scans so it steps through them all at the same time
         for scan_step in locked_scans:
             pass # all the work is done in the oneDimScan
         
-        #for scan_def in scan_defs:
-        #    print scan_def
-        #    for pub in publishers:
-        #        pub.publish_end(self.getState(), scan_def)
             
     
     

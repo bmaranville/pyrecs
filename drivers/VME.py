@@ -6,6 +6,7 @@ class VME:
     def __init__(self, port):
         self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=2)
         self.newline_str = '\r'
+        self.max_resends = 1
     
     def readline(self):
         line = ''
@@ -15,7 +16,7 @@ class VME:
             line += reply
         return line
         
-    def sendCMD(self, text_cmd = ''):
+    def sendCMD(self, text_cmd = '', resend_number=0):
         self.serial.flushInput() # get rid of lingering replies before new command
         if DEBUG: print 'writing command: ' + text_cmd
         self.serial.write(text_cmd + self.newline_str)
@@ -28,7 +29,10 @@ class VME:
         self.reply = reply
         self.serial.flush()
         if not self.reply[:3] == 'OK:':
-            raise Exception('VME says something bad: ' + self.reply)
+            if resend_number < self.max_resends:
+                self.sendCMD(text_cmd, resend_number+1)
+            else:
+                raise Exception('Max resends exceeded (%d) and VME says something bad: %s' % (resend_number, reply))
         return reply[3:].rstrip()
     
     ################### MOTOR FUNCTIONS #######################
