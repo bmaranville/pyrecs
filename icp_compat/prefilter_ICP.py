@@ -425,7 +425,7 @@ def prefilter_ICP(self,line,continuation):
 try:
     get_ipython() # test for newer version of Ipython
     
-    icpt = ICPTransformer()
+    #icpt = ICPTransformer()
     def activate_prefilter(instrument_controller, log_unfiltered = False):
         icpt.ic = instrument_controller
         icpt.log_unfiltered = log_unfiltered

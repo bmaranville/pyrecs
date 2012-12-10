@@ -1640,10 +1640,11 @@ class InstrumentController:
         for motnum in range(1,7):
             motstart = ibuf.data['a%dstart' % motnum]
             motstep = ibuf.data['a%dstep' % motnum]
-            motname = 'a%d' % motnum
-            init_state.append((motname, '%f' % motstart))
+            motname = 'a%d' % motnum            
             if motstep > FLOAT_ERROR: # floating-point errors!
                 scan_expr.append((motname, '%f + (i * %f)' % (motstart, motstep)))
+            else:
+                init_state.append((motname, '%f' % motstart))
                 
         if ibuf.data['IncT'] > FLOAT_ERROR:
             scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))

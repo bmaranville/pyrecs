@@ -370,9 +370,9 @@ class ICPDataFile:
         'flipper2': False, # off
         }
              
-    def GenerateHeader(self, state = {}, scan_def = {}):
+    def GenerateHeader(self, state = None, scan_def = None):
         params = deepcopy(state)
-        params.update(scan_def['init_state'])
+        params.update(dict(scan_def['init_state']))
         scan_expr = OrderedDict(scan_def['vary'])
         scan_state0 = {'i': 0}
         context = deepcopy(params)
@@ -386,6 +386,8 @@ class ICPDataFile:
         diff = {}
         for d in scan_expr:
             diff[d] = scan_state1[d] - scan_state0[d]
+            
+        params.update(scan_state0) # get the start positions of moving objects...
         #ibuf_data = scan_def['ibuf_data']
         description = scan_def['comment']
         description = '%-50s' % description[:50]  # chop it off at 50, but also pad the right to 50 if too short
