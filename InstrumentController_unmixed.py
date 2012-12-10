@@ -885,16 +885,19 @@ class InstrumentController:
         current_pos = {}
         def remove_finished_motors(motlist, poslist):
             # local utility function (obviously)
-            new_mot_list = []
-            new_pos_list = []
-            for motnum, target_pos in zip(motlist, poslist):
+            #new_mot_list = []
+            #new_pos_list = []
+            for i, (motnum, target_pos) in enumerate(zip(motlist, poslist)):
                 current_pos[motnum] = self.GetMotorPos(motnum)
                 if abs(current_pos[motnum] - target_pos) > tolerance[motnum]:
-                    new_mot_list.append(motnum)
-                    new_pos_list.append(target_pos)
-            return new_mot_list, new_pos_list
+                    motlist.pop(i)
+                    poslist.pop(i)
+                    #new_mot_list.append(motnum)
+                    #new_pos_list.append(target_pos)
+            #return new_mot_list, new_pos_list
             
-        motors_to_move, position_list = remove_finished_motors(motors_to_move, position_list) # if they're already there, take them off the list
+        #motors_to_move, position_list = remove_finished_motors(motors_to_move, position_list) # if they're already there, take them off the list
+        remove_finished_motors(motors_to_move, position_list) # if they're already there, take them off the list
         
         if len(motors_to_move) == 0:
             # all the motors are already within tolerance
@@ -925,7 +928,8 @@ class InstrumentController:
             if self._aborted: break
             result = self.moveMultiMotor(motors_to_move, positions1, check_limits, reraise_exceptions)
             if result == 'limit error': break
-            motors_to_move, positions1 = remove_finished_motors(motors_to_move, positions1)
+            #motors_to_move, positions1 = remove_finished_motors(motors_to_move, positions1)
+            remove_finished_motors(motors_to_move, positions1)
             # silently continues if still outside tolerance after motor_retries!
                        
         # second round of moves: only move backlashed motors
@@ -938,7 +942,8 @@ class InstrumentController:
             if self._aborted: break
             result = self.moveMultiMotor(motors_to_backlash, positions2, check_limits, reraise_exceptions)
             if result == 'limit error': break
-            motors_to_backlash, positions1 = remove_finished_motors(motors_to_backlash, positions2)
+            #motors_to_backlash, positions1 = remove_finished_motors(motors_to_backlash, positions2)
+            remove_finished_motors(motors_to_backlash, positions2)
             # silently continues if still outside tolerance after motor_retries!
             
         # can check for problems here:  if the lists aren't empty, they didn't meet tolerances:
