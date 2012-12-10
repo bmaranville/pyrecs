@@ -55,8 +55,8 @@ class FlipperControlMixin:
     """
     
     def __init__(self):
-        #term_line = int(self.ip.InstrCfg['mag_line'])
-        term_line = 4
+        term_line = int(self.ip.InstrCfg['term_line,'])
+        #term_line = 4
         if self.gpib is None:
             self.gpib = RS232GPIB(serial_port = self.ip.GetSerialPort(term_line)) # initialize our gpib controller
         #num_flipper_ps = len(self.ip.GetFcal())
@@ -173,9 +173,9 @@ class FlipperControlMixin:
         return flipping_ratio
     
     def getMonoFlippingRatio(self, duration):
-        self.getFlippingRatio(0, duration)
-    def getAnaFlippingRatio(self, duration):
         self.getFlippingRatio(1, duration)
+    def getAnaFlippingRatio(self, duration):
+        self.getFlippingRatio(2, duration)
             
     def setFlipperByName(self, flippernames, enable_list):
         if DEBUG: print "setting flippers by name!: ", flippernames

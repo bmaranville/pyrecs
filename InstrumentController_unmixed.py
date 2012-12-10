@@ -216,7 +216,8 @@ class InstrumentController:
         self.cossquared_fitter = FitCosSquaredGnuplot
         self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
-        self.default_publishers = [update_xpeek.XPeekPublisher(), GnuplotPublisher(auto_poisson_errorbars=False)]
+        #self.default_publishers = [update_xpeek.XPeekPublisher(), GnuplotPublisher(auto_poisson_errorbars=False)]
+        self.default_publishers = [update_xpeek.XPeekPublisher()]
         #self.default_publishers = [GnuplotPublisher(auto_poisson_errorbars=False)]
         self.logfilename = self.getNextFilename(time.strftime('%b%d%Y_'), '.LOG')
         self.logwriter = LogWriter(self.logfilename)
@@ -305,6 +306,7 @@ class InstrumentController:
         #    print "Resuming (Suspend flag cleared)"
         #else:
         #    print "Suspend: program will pause"
+        if not self._suspended: self.write('Suspending...')
         self._suspended = not self._suspended
         
     def Break(self, signum=None, frame=None):
@@ -530,7 +532,7 @@ class InstrumentController:
             mc.setField(field)
             
     def GetMagnetByName(self, mc_name, poll=False):
-        mcnum = int(mcname[1:])
+        mcnum = int(mc_name[1:])
         if poll==True:
             field = self._magnet[mcnum].getField()
             self.state[mc_name] = field
@@ -592,11 +594,11 @@ class InstrumentController:
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
         self.state['magnet_defined'] = (len(self._magnet) > 0)
-        for i, mc in enumerate(self._magnet):
-            self.state['h%d' % (i+1)] = mc.getField()
+        #for i, mc in enumerate(self._magnet):
+        #    self.state['h%d' % (i+1)] = mc.getField()
         self.state['temp_controller_defined'] = len(self._tc) > 0
-        for i, tc in enumerate(self._tc):
-            self.state['t%d' % (i+1)] = tc.getTemp()
+        #for i, tc in enumerate(self._tc):
+        #    self.state['t%d' % (i+1)] = tc.getTemp()
         self.state['timestamp'] = time.time()
         return self.state.copy()
     
@@ -1308,7 +1310,7 @@ class InstrumentController:
             yield scan_state.copy()
                 
     """ rewrite FindPeak as generic scan over one variable, publishing to XPeek and File, using Fitter """
-    def oneDimScan(self, scan_definition, publishers = [], extra_dicts = [], publish_end=True):
+    def oneDimScan(self, scan_definition, publishers = [], extra_dicts = [], publish_end=True, publish_time=False):
         """ the basic unit of instrument control:  
         initializes the instrument to some known state (scan_definition['init_state']), 
         publishes the start (to files, xpeek, etc in publishers)
@@ -1375,8 +1377,13 @@ class InstrumentController:
             self.write(out_str)
                 
             # publish datapoint
+            reported_count_time = None
+            if publish_time:
+                reported_count_time = result['count_time'] / 60000.0 # from milliseconds to minutes
+                
             for pub in publishers:
-                pub.publish_datapoint(output_state, scan_definition)
+                pub.publish_datapoint(output_state, scan_definition, count_time=reported_count_time)
+
             all_states.append(scan_state)
             yield output_state, scan_state
         
@@ -1407,9 +1414,10 @@ class InstrumentController:
         
         return scan_states
                 
-    def RunScan(self, scan_definition, auto_increment_file=True):
+    def RunScan(self, scan_definition, auto_increment_file=True, gnuplot=True):
         """runs a scan_definition with default publishers and FindPeak publisher """
         publishers = self.default_publishers + [publisher.RunScanPublisher()]
+        if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))
         new_scan_def = deepcopy(scan_definition)
         
         if auto_increment_file==True:
@@ -1433,7 +1441,7 @@ class InstrumentController:
         scan_definition = simplejson.loads(open(json_filename,'r').read())
         return self.DryRunScan(scan_definition)
     
-    def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False):
+    def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False, gnuplot=True):
         suffix = '.' + self.ip.GetNameStr().lower()
         if t_scan:
             new_filename = self.getNextFilename('fpt_%s_' % movable, suffix)
@@ -1457,7 +1465,8 @@ class InstrumentController:
                            'init_state': init_state,
                            'vary': scan_expr }
         
-        publishers = self.default_publishers + [ICPDataFile.ICPFindPeakPublisher()]     
+        publishers = self.default_publishers + [ICPDataFile.ICPFindPeakPublisher()]
+        if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))
         #scan = self.OneDimScan(self, scan_definition, publishers = publishers, extra_dict = {} )
         scan = self.oneDimScan(scan_definition, publishers = publishers, extra_dicts = [], publish_end=False)
         self.ResetAbort()
@@ -1632,19 +1641,18 @@ class InstrumentController:
             motstart = ibuf.data['a%dstart' % motnum]
             motstep = ibuf.data['a%dstep' % motnum]
             motname = 'a%d' % motnum
+            init_state.append((motname, '%f' % motstart))
             if motstep > FLOAT_ERROR: # floating-point errors!
                 scan_expr.append((motname, '%f + (i * %f)' % (motstart, motstep)))
-            else:
-                init_state.append((motname, '%f' % motstart))
                 
         if ibuf.data['IncT'] > FLOAT_ERROR:
             scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
-        else: 
+        elif state.get('magnet_defined', False) == True: 
             init_state.append(('t0', ibuf.data['T0']))
             
         if ibuf.data['Hinc'] > FLOAT_ERROR:
             scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
-        else:
+        elif state.get('temp_controller_defined', False) == True:
             init_state.append(('h0', ibuf.data['H0']))
             
         scan_definition = {'namestr': self.ip.GetNameStr(), 
@@ -1683,22 +1691,21 @@ class InstrumentController:
             scan_defs.append(new_scan_def)
         return scan_defs
         
-    def RunIBuffer(self, bufnum):
+    def RunIBuffer(self, bufnum, gnuplot=True):
         """ Execute the scan defined in the IBUFFER with number bufnum """
         polarization_enabled = self.polarization_enabled
         scan_defs = self.IBufferToScan(bufnum, polarization_enabled)
-            
-        publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]         
-        scans = [self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [] ) for scan_def in scan_defs]
+        
+        scans = []
+        for scan_def in scan_defs:            
+            publishers = self.default_publishers + [ICPDataFile.ICPDataFilePublisher()]
+            if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))    
+            scans.append(self.oneDimScan(scan_def, publishers = publishers, extra_dicts = [], publish_time=True ))
 
         locked_scans = itertools.izip_longest(*scans) #joins the scans so it steps through them all at the same time
         for scan_step in locked_scans:
             pass # all the work is done in the oneDimScan
         
-        #for scan_def in scan_defs:
-        #    print scan_def
-        #    for pub in publishers:
-        #        pub.publish_end(self.getState(), scan_def)
             
     
     
