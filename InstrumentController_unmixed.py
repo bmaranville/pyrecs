@@ -891,13 +891,12 @@ class InstrumentController:
             #new_pos_list = []
             for i, (motnum, target_pos) in enumerate(zip(motlist, poslist)):
                 current_pos[motnum] = self.GetMotorPos(motnum)
-                if abs(current_pos[motnum] - target_pos) > tolerance[motnum]:
+                if abs(current_pos[motnum] - target_pos) < tolerance[motnum]:
                     motlist.pop(i)
                     poslist.pop(i)
                     #new_mot_list.append(motnum)
                     #new_pos_list.append(target_pos)
             #return new_mot_list, new_pos_list
-            
         #motors_to_move, position_list = remove_finished_motors(motors_to_move, position_list) # if they're already there, take them off the list
         remove_finished_motors(motors_to_move, position_list) # if they're already there, take them off the list
         
