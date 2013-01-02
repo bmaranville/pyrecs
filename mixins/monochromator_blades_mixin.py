@@ -1,8 +1,35 @@
 from pyrecs.drivers.EZ_motor import EZStepper
+import collections
 #import functools
 #from mixin import MixIn
 MONO_BLADE_LINE = 2
 NUM_BLADES = 13
+
+def update(d, u):
+    """ recursive dictionary update """
+    for k, v in u.iteritems():
+        if isinstance(v, collections.Mapping):
+            r = update(d.get(k, {}), v)
+            d[k] = r
+        else:
+            d[k] = u[k]
+    return d
+    
+ICP_CONVERSIONS = {
+    'arg_commands': {
+        'pm': { 'numargs': [0,1], 'pyrecs_cmd': 'PrintMonoBladeAngle' },
+        'dm': { 'numargs': [2], 'pyrecs_cmd': 'DriveMonoBlade' },
+        'setm': { 'numargs': [2], 'pyrecs_cmd': 'SetMonoBladePosition' },
+        'fpm': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeakMonoBlade' }
+    },
+        
+    'en_dis_commands': {
+    },
+
+    'increment_commands': {},
+
+    'tied_commands': {},
+}
 
 class MonoBladeMixin:
     """ 
@@ -38,7 +65,8 @@ class MonoBladeMixin:
         # hook into the IC device registry:
         self.device_registry.update( {'monoblades':
                                 {'names': self.blade_names, 'updater': self.DriveMonoBladeByName }} )
-    
+        self.icp_conversions = update(self.icp_conversions, ICP_CONVERSIONS)
+        
     def SetMonoBladePosition(self, bladenum, pos):
         self.mbc.SetMotorPos(bladenum, pos)
         self.state['b%d' % (bladenum,)] = pos
@@ -49,6 +77,9 @@ class MonoBladeMixin:
         for b,p in zip(blade_list, position_list):
             self.dm(b, p)
             self.state['b%d' % (b,)] = p
+    
+    def DriveMonoBlade(self, bladenum, pos):
+        self.mbc.MoveMotor(bladenum, pos)
             
     def PrintMonoBladeAngle(self, bladenum=None):
         if bladenum:
