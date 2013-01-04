@@ -2,7 +2,8 @@ from pyrecs.drivers.EZ_motor import EZStepper
 import collections
 #import functools
 #from mixin import MixIn
-MONO_BLADE_LINE = 2
+MONO_BLADE_LINE = None
+MONO_PORT_FALLBACK = '/dev/ttyUSB4'
 NUM_BLADES = 13
 
 def update(d, u):
@@ -49,7 +50,10 @@ class MonoBladeMixin:
     
     def __init__(self):
         rs232conf_line = MONO_BLADE_LINE
-        port = self.ip.GetSerialPort(rs232conf_line)
+        if MONO_BLADE_LINE is None:
+            port = MONO_PORT_FALLBACK
+        else:
+            port = self.ip.GetSerialPort(rs232conf_line)
         self.mbc = EZStepper(port)
         self.mbc.num_mots = NUM_BLADES
         self.blade_names = ['b%d' % (i+1) for i in range(NUM_BLADES)]
@@ -64,7 +68,7 @@ class MonoBladeMixin:
         
         # hook into the IC device registry:
         self.device_registry.update( {'monoblades':
-                                {'names': self.blade_names, 'updater': self.DriveMonoBladeByName }} )
+                                {'names': self.blade_names, 'updater': self.DriveMonoBladeByName, 'getter': self.GetMonoBladeByName  }} )
         self.icp_conversions = update(self.icp_conversions, ICP_CONVERSIONS)
         
     def SetMonoBladePosition(self, bladenum, pos):
@@ -77,6 +81,12 @@ class MonoBladeMixin:
         for b,p in zip(blade_list, position_list):
             self.dm(b, p)
             self.state['b%d' % (b,)] = p
+            
+    def GetMonoBladeByName(self, blade_name, poll=False):
+        bladenum = self.blade_lookup[blade_name]
+        pos = self.mbc.GetMotorPos(bladenum)
+        #self.state['b%d' % (bladenum,)] = pos
+        return pos
     
     def DriveMonoBlade(self, bladenum, pos):
         self.mbc.MoveMotor(bladenum, pos)

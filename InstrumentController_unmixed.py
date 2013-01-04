@@ -32,7 +32,7 @@ from pyrecs.publishers.gnuplot_publisher import GnuplotPublisher
 
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
-AUTO_MOTOR_DISABLE = True
+AUTO_MOTOR_DISABLE = False
 FPT_OFFSET = 1
         
 class Publisher:
