@@ -111,6 +111,26 @@ class FitLineGnuplot(FitGnuplot):
         ydata = self.ydata
         p0 = {'y_offset': 0.0, 'slope': 0.0}
         return p0
+
+class FitLineAlternate(FitGnuplot):
+    def __init__(self, xdata, ydata, params_in = {}):
+        params_in['fit_func'] = 'slope * (x - x_offset)'
+        params_in['pname'] = ['slope','x_offset']
+        FitGnuplot.__init__(self, xdata, ydata, params_in)
+        
+    def do_fit(self, poisson_error=POISSON_ERROR):
+        result = FitGnuplot.do_fit(self, poisson_error)
+        result['center'] = result['x_offset']
+        self.params_out['fit_result'] = result
+        return result
+        
+    def make_guesses(self):
+        xdata = self.xdata
+        ydata = self.ydata
+        slope = (ydata[-1] - ydata[0]) / (xdata[-1] - xdata[0])
+        x_offset = xdata[0] - (ydata[0] / slope)
+        p0 = {'slope': slope, 'x_offset': x_offset}
+        return p0
         
 class FitCosSquaredGnuplot(FitGnuplot):
     def __init__(self, xdata, ydata, params_in = {}):

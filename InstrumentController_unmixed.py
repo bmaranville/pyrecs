@@ -32,7 +32,7 @@ from pyrecs.publishers.gnuplot_publisher import GnuplotPublisher
 
 FLOAT_ERROR = 1.0e-7
 DEBUG = False
-AUTO_MOTOR_DISABLE = False
+AUTO_MOTOR_DISABLE = True
 FPT_OFFSET = 1
         
 class Publisher:
@@ -213,6 +213,7 @@ class InstrumentController:
         self.writers = set([StdoutWriter()]) # handles screen output (and logging?)
         #self.fitter = FitGnuplot
         self.gauss_fitter = FitGaussGnuplot
+        self.line_fitter = FitLineAlternate
         self.cossquared_fitter = FitCosSquaredGnuplot
         self.quadratic_fitter = FitQuadraticGnuplot
         #self.publishers = [xpeek_broadcast()]
@@ -889,9 +890,10 @@ class InstrumentController:
             # local utility function (obviously)
             #new_mot_list = []
             #new_pos_list = []
-            for i, (motnum, target_pos) in enumerate(zip(motlist, poslist)):
+            for motnum, target_pos in zip(motlist, poslist):
                 current_pos[motnum] = self.GetMotorPos(motnum)
                 if abs(current_pos[motnum] - target_pos) < tolerance[motnum]:
+                    i = motlist.index(motnum)
                     motlist.pop(i)
                     poslist.pop(i)
                     #new_mot_list.append(motnum)
@@ -1531,6 +1533,20 @@ class InstrumentController:
         mstart = val_now - ( int(numsteps/2) * mstep)
         comment = 'FP'
         Fitter = self.gauss_fitter  
+        self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
+        
+    @validate_motor    
+    def FindLine(self, motnum, mrange, mstep, duration=-1, auto_drive_fit = False):
+        """the classic ICP function (fp) but fitting a line
+        It can be suspended with ctrl-z (ctrl-z again to resume)
+        or the 'finishup' routine skips the rest of the points and fits now (ctrl-\)
+        Abort (ctrl-c) works the same as usual """
+        numsteps = int( abs(float(mrange) / (mstep)) + 1)
+        movable = 'a%d' % (motnum,)
+        val_now = self.getState()[movable]
+        mstart = val_now - ( int(numsteps/2) * mstep)
+        comment = 'FL'
+        Fitter = self.line_fitter  
         self.PeakScan(movable, numsteps, mstart, mstep, duration, val_now, comment=comment, Fitter=Fitter, auto_drive_fit=auto_drive_fit)
         
     @validate_motor    

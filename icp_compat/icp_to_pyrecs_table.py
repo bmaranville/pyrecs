@@ -13,6 +13,7 @@ ICP_CONVERSIONS = {
         'ct': { 'numargs': [1], 'pyrecs_cmd': 'PrintCounts'},
         'mon': { 'numargs': [1], 'pyrecs_cmd': 'PrintMonitor'},
         'fp': { 'numargs': [3,4], 'pyrecs_cmd': 'FindPeak'},
+        'fl': { 'numargs': [3,4], 'pyrecs_cmd': 'FindLine'},
         'rapid': { 'numargs': [3,4,5], 'pyrecs_cmd': 'RapidScan_new'},
         'u': { 'numargs': [2], 'pyrecs_cmd': 'SetUpperLimit'},
         'l': { 'numargs': [2], 'pyrecs_cmd': 'SetLowerLimit'},

@@ -2,7 +2,7 @@ from pyrecs.drivers.EZ_motor import EZStepper
 import collections
 #import functools
 #from mixin import MixIn
-MONO_BLADE_LINE = None
+MONO_BLADE_LINE = 2
 MONO_PORT_FALLBACK = '/dev/ttyUSB4'
 NUM_BLADES = 13
 
