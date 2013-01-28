@@ -535,6 +535,20 @@ class InstrumentParameters:
     def GetSoftMotorOffset(self, motornum):
         field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
+        seek_pos = (self.maxmots + 1 - 1) * field_length * entry_length
+        seek_pos += (motornum - 1) * entry_length
+        # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero
+        f_in = open(self.motorsbuffile, 'rb')
+        f_in.seek(seek_pos)
+        data = f_in.read(entry_length)
+        f_in.flush()
+        f_in.close()
+        return struct.unpack('f', data)[0]
+    
+        
+    def GetSoftMotorOffset_motposbuf(self, motornum):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
         seek_pos = ((motornum - 1) * field_length * entry_length) + entry_length
         # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero
         f_in = open(self.motposbuffile, 'rb')
@@ -556,7 +570,7 @@ class InstrumentParameters:
         f_in.close()
         return struct.unpack('f', data)[0]
               
-    def SetSoftMotorOffset(self, motornum, offset):
+    def SetSoftMotorOffset_motposbuf(self, motornum, offset):
         field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
         seek_pos = ((motornum - 1) * field_length * entry_length) + entry_length
@@ -566,7 +580,23 @@ class InstrumentParameters:
         f_out.write(struct.pack('f', offset))
         f_out.flush()
         f_out.close()
+    
+    def SetSoftMotorOffset_motorsbuf(self, motornum, offset):
+        field_length = self.field_length
+        entry_length = 4 # 32-bit floating-point numbers
+        seek_pos = (self.maxmots + 1 - 1) * field_length * entry_length
+        seek_pos += (motornum - 1) * entry_length
+        # the (motornum - 1) is because our motor indexing at the user-interface starts at 1, not zero
+        f_out = open(self.motorsbuffile, 'r+b')
+        f_out.seek(seek_pos)
+        f_out.write(struct.pack('f', offset))
+        f_out.flush()
+        f_out.close()
         
+    def SetSoftMotorOffset(self, motornum, offset):
+        self.SetSoftMotorOffset_motorsbuf(motornum, offset)
+        self.SetSoftMotorOffset_motposbuf(motornum, offset)
+                
     def SetHardMotorPos(self, motornum, hard_pos):
         field_length = self.field_length
         entry_length = 4 # 32-bit floating-point numbers
