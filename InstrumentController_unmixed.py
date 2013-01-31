@@ -992,7 +992,7 @@ class InstrumentController:
         return data
     
     @validate_motor
-    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE, speed_ratio=1.0, step_time=0.2):
+    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, speed_ratio=1.0, step_time=0.2, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
         """ new, non-ICP function: count while moving.
                 returns: (position, counts, elapsed_time)
         
@@ -1035,8 +1035,11 @@ class InstrumentController:
         self.mc.EnableMotor(motornum)
         start_time = time.time()
         
-        motor_offset = self.ip.GetSoftMotorOffset(motornum)        
-        hard_stop = stop_angle + motor_offset
+        tol = self.ip.GetMotorTolerance(motornum)
+        motor_offset = self.ip.GetSoftMotorOffset(motornum)
+        direction = math.copysign(1.0, (stop_angle - start_angle))
+        hard_stop = stop_angle + motor_offset + direction*5.0*tol # drive a little past end position.
+        print "hard_stop: ", hard_stop
         # reduce the speed...
         self.mc.sendCMD('set mc(%d,vscale) %.4f' % (motornum, reduced_vscale))
         self.mc.sendCMD('set mc(%d,bscale) %.4f' % (motornum, reduced_bscale))
@@ -1055,11 +1058,11 @@ class InstrumentController:
         
         #while self.mc.CheckMoving(motornum):
         #soft_pos = start_angle
-        tol = self.ip.GetMotorTolerance(motornum)
+        
         readout_cmd = 'join [list [clock microseconds] [motor position %d] [scaler read] [motor position %d] [clock microseconds]] ";"' % (motornum, motornum)
-        print "moving?", self.mc.CheckMoving(motornum)
-        #while 1:
-        while self.mc.CheckMoving(motornum):
+        #print "moving?", self.mc.CheckMoving(motornum)
+        while 1:
+        #while self.mc.CheckMoving(motornum):
             if self._aborted:
                 self.write("aborted")
                 #if not reraise_exceptions:
@@ -1067,7 +1070,7 @@ class InstrumentController:
                 break
                 
             t_bef, mot_bef, ctstr, mot_aft, t_aft = self.mc.sendCMD(readout_cmd).split(";")
-            print [t_bef, mot_bef, ctstr, mot_aft, t_aft]
+            #print [t_bef, mot_bef, ctstr, mot_aft, t_aft]
             new_cum_count = float(ctstr.split()[2])
             cum_counts_list.append(new_cum_count)
             new_time = (int(t_bef) + int(t_aft))/2.0 - start_time # microseconds
@@ -1097,8 +1100,8 @@ class InstrumentController:
             tmp_file.close()
             self.updateGnuplot(tmp_path, title, error_bars=False) 
 
-            #if abs(new_soft_pos - soft_pos) <= tol:
-            #    break
+            if (direction * (stop_angle - new_soft_pos)) < tol:
+                break
             soft_pos = new_soft_pos
             old_time = new_time
             cum_count = new_cum_count

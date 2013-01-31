@@ -71,10 +71,10 @@ class FlipperControlMixin:
         # ICP commands:
         self.pfcal = self.PrintFlipperCalibration
         self.fcal = self.setFlipperCalibration
-        self.flm = functools.partial(self.setFlipper, 0)
-        self.fla = functools.partial(self.setFlipper, 1)
-        self.rm = functools.partial(self.getFlippingRatio, 0)
-        self.ra = functools.partial(self.getFlippingRatio, 1)
+        self.flm = functools.partial(self.setFlipper, 1)
+        self.fla = functools.partial(self.setFlipper, 2)
+        self.rm = functools.partial(self.getFlippingRatio, 1)
+        self.ra = functools.partial(self.getFlippingRatio, 2)
         self.iscan = self.IScan
         
         # hook into the IC device registry:
