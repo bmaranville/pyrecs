@@ -1,4 +1,7 @@
 from pyrecs.drivers.brookhaven_psd import BrookhavenDetector
+from pyrecs.drivers.nisto import NISTO
+
+INSTALLED_PSD = NISTO
 
 class PSDControlMixin:
     """ 
@@ -32,7 +35,7 @@ class PSDControlMixin:
         switch modes to count with the PSD """
         if enable: # enable the PSD, make Count command do PSDCount
             if self.psd is None:
-                try: self.psd = BrookhavenDetector()
+                try: self.psd = INSTALLED_PSD()
                 except: self.write("loading PSD driver failed")
             if self.psd is not None:
                 self.Count = self.PSDCount
@@ -43,7 +46,7 @@ class PSDControlMixin:
             
     def PSDCount(self, duration, reraise_exceptions = False):
         """ PSDCount(self, duration, reraise_exceptions = False):
-         Count using the PSD.  Specific to Brookhaven PSD """
+         Count using the PSD.  Specific to PSD """
         psd = self.psd
         duration = float(duration)
         self.scaler.ResetScaler()
