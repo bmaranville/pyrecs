@@ -101,6 +101,7 @@ class ICPDataFile:
         with open(self.filename, 'a') as f:
             f.write(header)            
             
+    
     def GenerateIBufferHeader(self, datafolder, bufnum, collim, mosaic, wavelength, num_scalers, tc_defined = False, magnet_defined = False):
         """ Create the header for an ibuffer datafile
         tc_defined is true if a temperature controller is defined and will be used
@@ -189,90 +190,7 @@ class ICPDataFile:
         header += '\n'
         
         return header
-             
-    def GenerateICPHeader(self, params = {}):
-        description = params['comment']
-        description = '%-50s' % description[:50]  # chop it off at 50, but also pad the right to 50 if too short
-        file_prefix = description[:5]
-        filename = params['filename']
-        tstring = "'I'   " # this is an i-buffer, after all
-        ttype  = 'RAW' # dunno why
-        numpoints = params['numpoints']
-        count_type = params['Type']
-        monitor = params['monit']
-        prefactor = params['Prefac']
-        tstart = float(params['T0'])
-        tincr = float(params['IncT'])
-        hfield = float(params['H0'])
-        Hinc = float(params['Hinc'])
-        Hconv = float(params['Hconv'])
-        num_detectors = int(params['num_detectors'])
-        timestr = params['timestr']
-        collim = params['collim']
-        mosaic = params['mosaic']
-        wavelength = params['wavelength']
-        
-        header = "'%12s' '%17s' %6s%8.f.%5i  '%4s'%5i  '%3s'\n" % (filename, timestr, tstring, monitor, prefactor, count_type, numpoints, ttype)
-        header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
-        header += '%50s ' % (description,)
-        if (params['flipper0'] is not None) or (params['flipper1'] is not None): 
-            #flipper1state = 'OFF' # to be implemented
-            #flipper2state = 'ON ' # to be implemented
-            # flipperstate should be 'OFF' or 'ON '
-            if params.get('flipper0', None) is True:
-                f0 = "ON "
-            else: 
-                f0 = "OFF"
-            if params.get('flipper1', None) is True:
-                f1 = "ON "
-            else: 
-                f1 = "OFF"
-            header += 'F1: %3s  F2: %3s  ' % (f0, f1)
-        header += '\n'
-        header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
-        header += ' %7.4f    %8.5f %7.5f %9.5f %4i ' % (wavelength, tstart, tincr, hfield, num_detectors)
-        if params['magnet_defined']: 
-            header += '%7.4f %7.4f' % (Hinc, Hconv)
-        header += '\n'
-        header += ' Collimation      Mosaic    Wavelength   T-Start   Incr.   H-field #Det    '
-        if params['magnet_defined']: # looks back into the calling parent, ic.  Make explicit?
-            header += '  H-conv   H-Inc'
-        header += '\n'
-        
-        motnums = set(range(1,7))
-        motors_to_move = []
-        
-        for motnum in motnums:
-            start = float(params['a%dstart' % motnum])
-            step = float(params['a%dstep' % motnum])
-            stop = start + ((npts - 1) * step)
-            if step > 1.0e-7: # motor precision is less than this
-                motors_to_move.append(motnum)
-            header += '%3d   %11.5f%11.5f%11.5f\n' % (motnum, start, step, stop)
-        header += ' Mot:    Start       Step      End\n'
-        
-        data_keys = []
-        for motnum in motors_to_move:
-            data_keys.append('     A%d   ' % motnum) 
-        if params['temp_controller_defined']:
-            data_keys.append(' TEMP  ')
-            # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
-        if params['magnet_defined']:
-            data_keys.append(' H-Field ')
-            # this mimics the ICP behaviour in which the H-field is only looked at if a magnet device is defined
-        data_keys.append('  MIN  ')
-        if not params['Type'] == 'NEUT': 
-            data_keys.append('    MONITOR ')
-        data_keys.append('     COUNTS ')
-        if num_detectors > 1: 
-            data_keys.append('     EXTRA  ')
-        
-        # now generate the data header from the keys
-        for key in data_keys:
-            header += key
-        header += '\n'
-        
-        return header 
+          
     
     def getHeader(self, filename):
         f_in = open(filename, 'r')
@@ -425,13 +343,13 @@ class ICPDataFile:
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
         header += ' %7.4f    %8.5f %7.5f %9.5f %4i ' % (wavelength, tstart, tincr, hfield, num_detectors)
-        if params['magnet_defined']: # looks back into the calling parent, ic.  Make explicit?
+        if params['magnets_defined'] >0: # looks back into the calling parent, ic.  Make explicit?
             Hinc = float(diff.get('h0', 0.0))
             Hconv = 1.000 # need to look up in MOTORS.BUF?
             header += '%7.4f %7.4f' % (Hinc, Hconv)
         header += '\n'
         header += ' Collimation      Mosaic    Wavelength   T-Start   Incr.   H-field #Det    '
-        if params['magnet_defined']: # looks back into the calling parent, ic.  Make explicit?
+        if params['magnets_defined']>0: # looks back into the calling parent, ic.  Make explicit?
             header += '  H-conv   H-Inc'
         header += '\n'
         
@@ -449,11 +367,11 @@ class ICPDataFile:
         motors_to_move = [m for m in motnames if m in scan_expr.keys()]
         for motname in motors_to_move:
             data_keys.append('     %s   ' % motname.upper()) 
-        if params['temp_controller_defined']:
-            data_keys.append(' TEMP  ')
+        for i in range(params['temp_controllers_defined']): 
+            data_keys.append(' TEMP%d ' % i)
             # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
-        if params['magnet_defined']:
-            data_keys.append(' H-Field ')
+        for i in range(params['magnets_defined']):
+            data_keys.append(' H-Field%d ' % i)
             # this mimics the ICP behaviour in which the H-field is only looked at if a magnet device is defined
         data_keys.append('  MIN  ')
         if not count_type == 'NEUT': 
