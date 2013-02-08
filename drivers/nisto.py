@@ -101,7 +101,8 @@ SERVERPORT = 20000
 SERVERHOST = "detector"
 CMDWAIT = 500000
 
-INTSIZE = 4
+import socket, struct, time, os
+INTSIZE = struct.calcsize("I")
 DEBUG = False
 
 class NISTO:
