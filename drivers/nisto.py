@@ -3,14 +3,10 @@
 # Constants
 # 
 #############################################################################################
- 
-
-INT_BYTES = Integer.SIZE / Byte.SIZE;
 
 DET_DIMX = 128;
 DET_DIMY = 128;
 DET_SIZE = DET_DIMX * DET_DIMY;
-DET_SIZE_BYTES = DET_SIZE * INT_BYTES;
 
 #
 # NISTO apparently uses a buffer size of 2^16 (64K). This means that the maximum block size it
