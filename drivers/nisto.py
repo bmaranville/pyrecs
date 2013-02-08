@@ -139,7 +139,7 @@ class NISTO:
     def tcp_close(self):
         self.connection.close()
         
-    def sendPKG(self, connection, opcode, prm, data = None, ldata = 0):
+    def sendPKG(self, connection, opcode, prm, data = None):
         if data == None:
             ldata = 0
         else:
@@ -233,7 +233,7 @@ class NISTO:
         # this has changed from HISTO to NISTO
         #blocksize = 1024
         connection = self.tcp_open()
-        self.sendPKG(connection, OP_CMD, CMD_XFER, struct.pack('I', XFER_BLOCK_SIZE), 4)
+        self.sendPKG(connection, OP_CMD, CMD_XFER, struct.pack('I', XFER_BLOCK_SIZE))
         start_time = time.time()
         retn = self.recvHIST(connection)
         end_time = time.time()
