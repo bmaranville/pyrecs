@@ -367,7 +367,7 @@ function printWithRunin(h, s, type)
 
 function icp(method, params)
 {
-  xmlrpc("http://andr.ncnr.nist.gov:8001/RPC2", method, params, function(ret) {
+  xmlrpc("http://magik.ncnr.nist.gov:8001/RPC2", method, params, function(ret) {
     println(ret);
 }, function(err) {
     alert("error occurred: " + err);
@@ -380,7 +380,7 @@ var shellCommands =
 {
 icp : function icp(method, params)
 {
-  xmlrpc("http://andr.ncnr.nist.gov:8001/RPC2", method, params, function(ret) {
+  xmlrpc("http://magik.ncnr.nist.gov:8001/RPC2", method, params, function(ret) {
     println(ret);
 }, function(err) {
     alert("error occurred: " + err);
