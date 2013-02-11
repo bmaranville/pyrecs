@@ -594,10 +594,10 @@ class InstrumentController:
         self.state.setdefault('project_path', self.datafolder)
         self.state.setdefault('measurement_id', None) # this is like a filename, perhaps.  we're not in a measurement
         self.state.setdefault('result', {}) # needs to be filled by a measurement!
-        self.state['magnet_defined'] = (len(self._magnet) > 0)
+        self.state['magnets_defined'] = len(self._magnet)
         #for i, mc in enumerate(self._magnet):
         #    self.state['h%d' % (i+1)] = mc.getField()
-        self.state['temp_controller_defined'] = len(self._tc) > 0
+        self.state['temp_controllers_defined'] = len(self._tc)
         #for i, tc in enumerate(self._tc):
         #    self.state['t%d' % (i+1)] = tc.getTemp()
         self.state['timestamp'] = time.time()
@@ -1666,12 +1666,12 @@ class InstrumentController:
                 
         if ibuf.data['IncT'] > FLOAT_ERROR:
             scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
-        elif state.get('magnet_defined', False) == True: 
+        elif state.get('temp_controllers_defined', 0) > 0: 
             init_state.append(('t0', ibuf.data['T0']))
             
         if ibuf.data['Hinc'] > FLOAT_ERROR:
             scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
-        elif state.get('temp_controller_defined', False) == True:
+        elif state.get('magnets_defined', 0) > 0:
             init_state.append(('h0', ibuf.data['H0']))
             
         scan_definition = {'namestr': self.ip.GetNameStr(), 
