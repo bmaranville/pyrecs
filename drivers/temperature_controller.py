@@ -39,9 +39,16 @@ class TemperatureController(object):
     def getTemp(self, sensor=None):
         pass
     
-    def getTemp(self, temp):
+    def setTemp(self, temp):
         pass
         
     def getSetpoint(self):
         pass
+    
+    def getState(self):
+        state = {
+            'temp': self.getTemp(),
+            'setpoint': self.getSetpoint()
+        }
+        return state
     

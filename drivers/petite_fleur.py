@@ -55,7 +55,16 @@ class PetiteFleur(TemperatureController):
     def receiveReply(self):
         reply = self.serial.readline().rstrip('\r\n')
         return reply
-        
+    
+    def getState(self, poll=True):
+        state = {
+            'settings': self.settings.copy(),
+            'sample_temp': self.getSampleTemp(),
+            'control_temp': self.getControlTemp(),
+            'setpoint': self.getSetpoint()
+        }
+        return state
+                
     def setTemp(self, new_setpoint):        
         """ send a new temperature setpoint to the temperature controller """
         self.sendCommand('OUT_SP_%02d %7.3f' % (self.settings['control_loop'], new_setpoint), reply_expected = False)

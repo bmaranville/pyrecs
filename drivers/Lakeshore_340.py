@@ -4,7 +4,7 @@ from temperature_controller import TemperatureController
 class Lakeshore340(TemperatureController):
     """ driver for serial connection to Lakeshore 340 Temperature Controller """
     label = 'Lakeshore 331/340'
-    def __init__(self, port = '/dev/ttyUSB2'):
+    def __init__(self, port = '/dev/ttyUSB6'):
         TemperatureController.__init__(self, port)
         """ the Temperature serial connection is on the third port at MAGIK, which is /dev/ttyUSB2 """
         self.setpoint = 0.0
@@ -12,10 +12,10 @@ class Lakeshore340(TemperatureController):
         self.settings = {
             'sample_sensor': 'A',
             'control_sensor': 'A',
-            'record': 'both',
+            'record': 'all',
             'units': 1,
             'control_loop': 1,
-            'serial_port': '/dev/ttyUSB4'
+            'serial_port': '/dev/ttyUSB6'
             }
         sensors = {'A': "Sensor A", 'B':"Sensor B"}
         self.valid_settings = {
@@ -48,9 +48,19 @@ class Lakeshore340(TemperatureController):
     def receiveReply(self):
         reply = self.serial.readline().rstrip('\r\n')
         return reply
+    
+    def getState(self, poll=True):
+        state = {
+            'settings': self.settings.copy(),
+            'sample_temp': self.getSampleTemp(),
+            'control_temp': self.getControlTemp(),
+            'setpoint': self.getSetpoint()
+        }
+        return state
         
     def setControlLoop(self, on_off = 1):
     	""" initializes loop of temp controller, with correct control sensor etc. """
+    	self.serial.port = self.settings['serial_port']
     	# units[1] = Kelvin
     	# units[2] = Celsius
     	# units[3] = Sensor units

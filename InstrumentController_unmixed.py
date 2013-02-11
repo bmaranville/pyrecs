@@ -446,6 +446,13 @@ class InstrumentController:
         if (int(device_num) < 1 or int(device_num) > len(self._tc)):
             self.write('%d is Not a valid temperature device (valid values are between 1 and %d)\n' % (int(device_num), len(self._tc)))
             return
+        elif value is None:
+            tc = self._tc[device_num-1]
+            settings = tc.getSettings()
+            settings_str = pprint.pformat(settings)
+            self.write("%d: driver=%s, port=%s, settings=\n  %s\n" % (device_num+1, tc.label, tc.port, settings_str))
+            self.write('To remove, type \'rtdev %d\'\n' % (device_num+1))
+            self.write('To change settings, type e.g. \'tdev %d sample_sensor A\'\n' % (device_num+1,))
         self.write(self._tc[int(device_num) -1].configure(keyword, value))
         
     def TemperatureDevice(self, device_num=None, keyword=None, value=None):
@@ -549,13 +556,13 @@ class InstrumentController:
             tc.setTemp(temp)
             
     def GetTemperatureByName(self, tc_name, poll=False):
-        tcnum = int(tcname[1:])
+        tcnum = int(tc_name[1:])-1
         if poll==True:
-            temp = self._tc[tcnum].getTemp()
-            self.state[tc_name] = temp
-            return temp
+            tc_state = self._tc[tcnum].getState()
+            self.state[tc_name] = tc_state
+            return tc_state
         else:
-            return self.state.get(tc_name, '')
+            return self.state.get(tc_name, {})
     
     def getNextFilename(self, prefix, suffix, path = None):
         """ find the highest filenumber with prefix and suffix
