@@ -115,7 +115,8 @@ class MainFrame(wx.Frame):
             self, message="Choose a file",
             defaultFile=self.file_path if self.file_path is not None else "",
             #wildcard=wildcard,
-            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+            #style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+            style=wx.FD_SAVE,
             )
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
@@ -149,7 +150,8 @@ class MainFrame(wx.Frame):
             msg = wx.MessageDialog(None, 'Must specify path, device and time before starting', 'error', wx.OK | wx.ICON_ERROR)
             msg.ShowModal()
             msg.Destroy()
-            return
+            return            
+        self.writeHeader() # put column labels up
         self.status_label.SetForegroundColour(wx.Colour(0, 255, 64))
         self.status_label.SetLabel('Started')
         self.timer.Start(self.time_constant * 1000) # s to ms
@@ -166,6 +168,23 @@ class MainFrame(wx.Frame):
         tc_state = self.temp_controller.getState()
         self.info_label.SetLabel('Last read: ' + time.ctime() + '\n' + str(tc_state))
         event.Skip()
+        
+    def writeHeader(self):
+        tc = self.temp_controller
+        record = tc.settings['record']
+        readouts = tc.valid_settings['record'].copy()
+        if 'all' in readouts: readouts.pop('all') # everything but "all"
+        readout_keys = readout.keys()
+        readout_keys.sort()
+        if record == 'all':
+            col_labels = [tc.valid_settings[k] for k in readout_keys]
+        else:
+            col_labels = [tc.valid_settings[record]]
+        col_labels.extend(['Timestamp', 'Date/Time'])
+        open(self.file_path, 'r+').write("\t".join(col_labels)) # file will close after statement
+        
+    def writePoint(self):
+        pass
         
 
 # end of class MainFrame
