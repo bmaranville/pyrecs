@@ -23,11 +23,13 @@ class PetiteFleur(TemperatureController):
             'thermometer_calibration': 1, # applied to sample sensor
             'serial_port': '/dev/ttyUSB7'            
             }
-        sensors = {0: "Bath temp", 1:"Sensor 1", 2:"Process temp"}
+        self.sensors = {0: "Bath temp", 2:"Process temp"}
+        valid_record = self.sensors.copy()
+        valid_record.update({'setpoint':"Setpoint", 'all':"Record all"})
         self.valid_settings = {
-            'sample_sensor': sensors,
-            'control_sensor': sensors,
-            'record': {'setpoint':"Control setpoint", 'all':"Record all 3"}.update(sensors),
+            'sample_sensor': self.sensors,
+            'control_sensor': self.sensors,
+            'record': valid_record,
             'control_loop': {0: "0", 1: "1", 2: "2"},
             'thermometer_calibration': {1: "T_raw*0.97877 - 0.86433", 2: "T_raw*0.97398 - 0.58107"},
             'serial_port': dict([('/dev/ttyUSB%d' % i, 'Serial port %d' % (i+1)) for i in range(4, 16)]),
@@ -61,12 +63,12 @@ class PetiteFleur(TemperatureController):
         return reply
     
     def getState(self, poll=True):
-        state = {
-            'settings': self.settings.copy(),
-            'sample_temp': self.getSampleTemp(),
-            'control_temp': self.getControlTemp(),
-            'setpoint': self.getSetpoint()
-        }
+        state = {}
+        for sensor in self.sensors:
+            sensor_name = self.sensors[sensor]
+            sensor_value = self.getTemp(sensor)
+            state[sensor_name] = sensor_value
+        state['Setpoint'] = self.getSetpoint() 
         return state
                 
     def setTemp(self, new_setpoint):        

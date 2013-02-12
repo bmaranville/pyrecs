@@ -166,7 +166,8 @@ class MainFrame(wx.Frame):
     
     def onTimer(self, event):
         tc_state = self.temp_controller.getState()
-        self.info_label.SetLabel('Last read: ' + time.ctime() + '\n' + str(tc_state))
+        self.writePoint(tc_state)
+        self.info_label.SetLabel('Last read: ' + time.ctime())
         event.Skip()
         
     def writeHeader(self):
@@ -174,17 +175,27 @@ class MainFrame(wx.Frame):
         record = tc.settings['record']
         readouts = tc.valid_settings['record'].copy()
         if 'all' in readouts: readouts.pop('all') # everything but "all"
-        readout_keys = readout.keys()
+        readout_keys = readouts.keys()
         readout_keys.sort()
         if record == 'all':
-            col_labels = [tc.valid_settings[k] for k in readout_keys]
+            col_labels = [tc.valid_settings['record'][k] for k in readout_keys]
         else:
-            col_labels = [tc.valid_settings[record]]
-        col_labels.extend(['Timestamp', 'Date/Time'])
-        open(self.file_path, 'r+').write("\t".join(col_labels)) # file will close after statement
+            col_labels = [tc.valid_settings['record'][record]]
+        col_labels.extend(['Timestamp', 'Date'])
+        self.col_labels = col_labels
+        outfile = open(self.file_path, 'a')
+        outfile.write('#' + tc.label + '\n')
+        outfile.write('#' + str(tc.settings) + '\n')
+        outfile.write("#" + "\t".join(col_labels) + '\n') # file will close after statement
+        outfile.close()
         
-    def writePoint(self):
-        pass
+    def writePoint(self, state):
+        # add some data:
+        state['Timestamp'] = '%.3f' % (time.time(),) # round to milliseconds place
+        state['Date'] = '"' + time.ctime() + '"'
+        data = [str(state[k]) for k in self.col_labels]
+        open(self.file_path, 'a').write("\t".join(data) + '\n')
+        
         
 
 # end of class MainFrame
