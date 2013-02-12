@@ -15,6 +15,15 @@ class NESLAB_BATH(TemperatureController):
         MakeLocal()
     """
     label = 'Neslab RTE7'
+    commands = {
+        'Read Acknowledge': 0x00,
+        'Read Status': 0x09,
+        'Read Internal Temperature': 0x20,
+        'Read External Sensor': 0x21,
+        'Set Setpoint': 0xF0,
+        'Set On/Off Array': 0x81
+    }
+    
     def __init__(self, port = '/dev/ttyUSB2'):
         TemperatureController.__init__(self, port)
         """ the Temperature serial connection is on the second port at AND/R, which is /dev/ttyUSB1 """
@@ -24,22 +33,27 @@ class NESLAB_BATH(TemperatureController):
             'record': 'all'
             }
         sensors = {'I': "Internal", 'X':"External"}
+        valid_record = sensors.copy()
+        valid_record.update({'setpoint':"Control setpoint", 'all':"Record all 3"})
         self.valid_settings = {
             'sample_sensor': sensors,
             'control_sensor': sensors,
-            'record': {'setpoint':"Control setpoint", 'all':"Record all 3"}.update(sensors)
+            'record': valid_record,
             }
-        self.commands = {
-            'Read Acknowledge': 0x00,
-            'Read Status': 0x09,
-            'Read Internal Temperature': 0x20,
-            'Read External Sensor': 0x21,
-            'Set Setpoint': 0xF0,
-            'Set On/Off Array': 0x81
-            }
+        #self.commands = {
+        #    'Read Acknowledge': 0x00,
+        #    'Read Status': 0x09,
+        #    'Read Internal Temperature': 0x20,
+        #    'Read External Sensor': 0x21,
+        #    'Set Setpoint': 0xF0,
+        #    'Set On/Off Array': 0x81
+        #    }
         
         
     def _send_command(self, cmd_string):
+        if self.serial is None:
+            self.initSerial()
+            
         self.serial.flushInput() # drain the pipes before issuing a command
         send_str = '\xca'
         send_str += cmd_string
@@ -82,6 +96,15 @@ class NESLAB_BATH(TemperatureController):
             return
         else:
             return reply
+    
+    def getState(self, poll=True):
+        state = {
+            'settings': self.settings.copy(),
+            'control_temp': self.getTemp(),
+            'setpoint': self.getSetpoint(),
+            'aux_temp': self.getAuxTemp()
+        }
+        return state
     
     def getTemp(self):
         cmd_string = '\x00\x01\x20\x00'

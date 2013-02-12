@@ -32,14 +32,18 @@ class PetiteFleur(TemperatureController):
             'thermometer_calibration': {1: "T_raw*0.97877 - 0.86433", 2: "T_raw*0.97398 - 0.58107"},
             'serial_port': dict([('/dev/ttyUSB%d' % i, 'Serial port %d' % (i+1)) for i in range(4, 16)]),
             }
-        self.serial.port = self.settings['serial_port']
+        self.port = self.settings['serial_port']
     
     def updateSettings(self, keyword, value):
         self.settings[keyword] = value
         if keyword == 'port':
-            self.serial.port = value
+            self.port = value
+            if self.serial is not None:
+                self.serial.port = self.port
     
     def sendCommand(self, command = None, reply_expected = False):
+        if self.serial is None:
+            self.initSerial()
         if command is None:
             return ''
         else:

@@ -18,22 +18,30 @@ class Lakeshore340(TemperatureController):
             'serial_port': '/dev/ttyUSB6'
             }
         sensors = {'A': "Sensor A", 'B':"Sensor B"}
+        valid_record = sensors.copy()
+        valid_record.update({'setpoint':"Control setpoint", 'all':"Record all 3"})
         self.valid_settings = {
             'sample_sensor': sensors,
             'control_sensor': sensors,
-            'record': {'setpoint':"Control setpoint", 'all':"Record all 3"}.update(sensors),
+            'record': valid_record,
             'units': {1: "Kelvin", 2: "Celsius", 3: "Sensor units"},
             'control_loop': {1: "1", 2: "2"},
             'serial_port': dict([('/dev/ttyUSB%d' % i, 'Serial port %d' % (i+1)) for i in range(4, 16)]),
             }
-        self.setControlLoop()
     
     def updateSettings(self, keyword, value):
         self.settings[keyword] = value
         if keyword in ['control_sensor', 'units', 'control_loop']:
             self.SetControlLoop()
+    
+    def initSerial(self):
+        self.serial = serial.Serial(self.port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+        self.setControlLoop()
             
     def sendCommand(self, command = None, reply_expected = False):
+        if self.serial is None:
+            self.initSerial()
+            
         if not command:
             return ''
         else:
@@ -60,7 +68,7 @@ class Lakeshore340(TemperatureController):
         
     def setControlLoop(self, on_off = 1):
     	""" initializes loop of temp controller, with correct control sensor etc. """
-    	self.serial.port = self.settings['serial_port']
+    	self.port = self.settings['serial_port']
     	# units[1] = Kelvin
     	# units[2] = Celsius
     	# units[3] = Sensor units

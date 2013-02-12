@@ -12,12 +12,15 @@ class TemperatureController(object):
         """ the Temperature serial connection is on the third port at MAGIK, which is /dev/ttyUSB2 """
         self.port = port
         #self.serial = serial.serial_for_url(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
-        self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
+        self.serial = None
         self.settings = {}
         self.valid_settings = {}
         
     def getSettings(self):
         return self.settings
+    
+    def initSerial(self):
+        self.serial = serial.Serial(self.port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
     
     def configure(self, keyword=None, value=None):
         valid_keywords = self.settings.keys()
@@ -38,6 +41,9 @@ class TemperatureController(object):
         
     def getTemp(self, sensor=None):
         pass
+        
+    def getAuxTemp(self):
+        return self.getTemp()
     
     def setTemp(self, temp):
         pass
@@ -48,6 +54,7 @@ class TemperatureController(object):
     def getState(self):
         state = {
             'temp': self.getTemp(),
+            'aux_temp': self.getAuxTemp(),
             'setpoint': self.getSetpoint()
         }
         return state
