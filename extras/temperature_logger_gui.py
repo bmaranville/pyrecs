@@ -10,6 +10,7 @@ import pyrecs
 import pyrecs.drivers
 import tc_config
 import time
+import pprint
 
 # begin wxGlade: extracode
 # end wxGlade
@@ -69,10 +70,11 @@ class MainFrame(wx.Frame):
         sizer_4 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_7 = wx.BoxSizer(wx.VERTICAL)
         sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
+        #info_sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_7.Add(self.tc_label, 0, wx.TOP | wx.ALIGN_BOTTOM, 10)
         sizer_5.Add(self.tempctl_choice, 0, 0, 0)
         sizer_5.Add(self.cfg_tempct_btn, 0, 0, 0)
-        sizer_7.Add(sizer_5, 1, wx.BOTTOM, 20)
+        sizer_7.Add(sizer_5, 1, wx.BOTTOM | wx.EXPAND , 10)
         sizer_2.Add(sizer_7, 1, wx.EXPAND, 0)
         sizer_4.Add(self.file_chooser, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_4.Add(self.file_label, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL, 0)
@@ -81,11 +83,13 @@ class MainFrame(wx.Frame):
         sizer_6.Add(self.time_label, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         sizer_2.Add(sizer_6, 1, wx.TOP | wx.BOTTOM | wx.EXPAND, 0)
         sizer_2.Add(self.status_label, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_2.Add(self.info_label, 0, wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_2.Add(self.info_label, 0, wx.ALIGN_CENTER_HORIZONTAL , 0)
+        #info_sizer.Add(self.info_label, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+        #sizer_2.Add(info_sizer, 1, wx.EXPAND, 0)
         sizer_3.Add(self.start_button, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_3.Add(self.stop_button, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_2.Add(sizer_3, 1, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_1.Add(sizer_2, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 30)
+        sizer_1.Add(sizer_2, 1, wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
         self.Layout()
@@ -123,7 +127,8 @@ class MainFrame(wx.Frame):
             #print "You chose the following file(s):", path
             self.file_label.SetLabel(path)
             self.file_label.SetToolTipString(path)
-            self.GetSizer().Fit(self)
+            #self.GetSizer().Fit(self)
+            self.__do_layout()
             self.file_path = path
         dlg.Destroy()
 
@@ -167,7 +172,10 @@ class MainFrame(wx.Frame):
     def onTimer(self, event):
         tc_state = self.temp_controller.getState()
         self.writePoint(tc_state)
-        self.info_label.SetLabel('Last read: ' + time.ctime())
+        ppstr = pprint.pformat(tc_state)
+        self.info_label.SetLabel('Last read: ' + time.ctime() + '\n' + ppstr)
+        #self.GetSizer().Fit(self)
+        self.__do_layout()
         event.Skip()
         
     def writeHeader(self):
