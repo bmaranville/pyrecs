@@ -359,12 +359,13 @@ class ICPTransformer(object):
     
     # XXX: inheriting from PrefilterTransformer as documented gives TypeErrors,
     # but apparently is not needed after all
-    def __init__(self, rootname=''):
+    def __init__(self, rootname='', echo=False):
         self.rootname = rootname
         self.priority = 99
         self.enabled = True
         self.log_unfiltered = False
         self.ic = None
+        self.echo = echo
         
         self.arg_commands = ICPCommandList(rootname=rootname)
         self.en_dis_commands = ICPEnableDisableCommands(rootname=rootname)
@@ -400,7 +401,7 @@ class ICPTransformer(object):
             
             #prefiltered_cmds += (cmd + ';')
             prefiltered_cmdlist.append(cmd)
-            if DEBUG: print cmd
+            if self.echo == True: print cmd
             if self.log_unfiltered and (self.ic is not None):
                 print 'log_unfiltered: ', self.log_unfiltered
                 self.ic.write('', subline, timestamp = True) # callback to InstrumentController

@@ -17,8 +17,12 @@ import simplejson
 
 import itertools
 import functools
-from ordered_dict import OrderedDict
-#from collections import OrderedDict
+#from ordered_dict import OrderedDict
+import collections
+if hasattr(collections, 'OrderedDict'):
+    from collections import OrderedDict
+else:
+    from ordered_dict import OrderedDict
 from prefilter_ICP import prefilterICPString
 from ICPSequenceFile import PyICPSequenceFile, PyICPSequenceStringIO
 from pyrecs.icp_compat import ibuffer
