@@ -5,7 +5,6 @@ from FileManifest import FileManifest
 from publisher import Publisher
 from copy import copy, deepcopy
 import math
-import time
 import pprint
 from pyrecs.ordered_dict import OrderedDict
 #from collections import OrderedDict
@@ -71,11 +70,12 @@ class ICPDataFile:
     """ class to write to ICP-style data files """
     time_fmt = '%a %b %d %H:%M:%S %Y'
     
-    def __init__(self, params = {}):
+    def __init__(self, params = None):
         #self.ic = instrument_controller
         #self.ip = self.ic.ip # InstrumentParameters object: need it to get configuration data (wavelength etc)
         self.params = self.default_params
-        self.params.update(params)  # override the defaults, if specified
+        if params is not None: 
+            self.params.update(params)  # override the defaults, if specified
         self.filename = self.params['filename']
 
     def getNextFilename(self, file_path, file_prefix, file_suffix, autoset = False):
@@ -95,102 +95,6 @@ class ICPDataFile:
         if autoset:
             self.filename = new_filename
         return new_filename
-    
-    def WriteIBufferHeader(self, bufnum):
-        header = self.GenerateIBufferHeader(bufnum)
-        with open(self.filename, 'a') as f:
-            f.write(header)            
-            
-    
-    def GenerateIBufferHeader(self, datafolder, bufnum, collim, mosaic, wavelength, num_scalers, tc_defined = False, magnet_defined = False):
-        """ Create the header for an ibuffer datafile
-        tc_defined is true if a temperature controller is defined and will be used
-        magnet_defined is true if a magnet controller is defined and will be used """
-        ################################################################################
-        # Format carefully copied from dmp_data.src - should be the same as ICP output #
-        ################################################################################
-        
-        ibufs = ibuffer.IBUFFER(project_path = datafolder) # use default values to get IBUFFER: current directory, IBUFFER.BUF, 30 entries
-        ibuf = ibufs.buffers[bufnum-1] # array starts at zero - bufnum starts at one
-        # Generate header:
-        description = ibuf.data['description']
-        file_prefix = description[:5]
-        filename = self.getNextFilename(file_prefix, '.cg1')
-        tstring = "'I'   " # this is an i-buffer, after all
-        ttype  = 'RAW' # dunno why
-        npts = ibuf.data['numpoints']
-        count_type = ibuf.data['Type']
-        monitor = ibuf.data['monit']
-        prefactor = ibuf.data['Prefac']
-        tstart = float(ibuf.data['T0'])
-        tincr = float(ibuf.data['IncT'])
-        hfield = float(ibuf.data['H0'])
-        num_detectors = int(ip.InstrCfg['#scl'])
-        p1exec, p2exec, p3exec, p4exec = (ibuf.data['p1exec'], ibuf.data['p2exec'], ibuf.data['p3exec'], ibuf.data['p4exec'])
-        if p1exec or p2exec or p3exec or p4exec:
-            polarized_beam = True
-        else: 
-            polarized_beam = False
-        timestr = time.strftime('%b %d %Y %H:%M')
-        #collim, mosaic = ip.GetCollimationMosaic()
-        wavelength = ip.GetWavelength()
-        
-        header = "'%12s' '%17s' %6s%8.f.%5i  '%4s'%5i  '%3s'\n" % (filename, timestr, tstring, monitor, prefactor, count_type, npts, ttype)
-        header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
-        header += '%50s ' % (description,)
-        if polarized_beam: 
-            flipper1 = 'OFF' # to be implemented
-            flipper2 = 'ON ' # to be implemented
-            header += 'F1: %3s  F2: %3s  \n' % (flipper1, flipper2)
-        else: 
-            header += '\n'
-        header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
-        header += ' %7.4f    %8.5f %7.5f %9.5f %4i ' % (wavelength, tstart, tincr, hfield, num_detectors)
-        if magnet_defined: # looks back into the calling parent, ic.  Make explicit?
-            Hinc = ibuf.data['Hinc']
-            Hconv = 1.000 # need to look up in MOTORS.BUF?
-            header += '%7.4f %7.4f' % (Hinc, Hconv)
-        header += '\n'
-        header += ' Collimation      Mosaic    Wavelength   T-Start   Incr.   H-field #Det    '
-        if magnet_defined: 
-            header += '  H-conv   H-Inc'
-        header += '\n'
-        
-        motnums = set(range(1,7))
-        motors_to_move = []
-        
-        for motnum in motnums:
-            start = float(ibuf.data['a%dstart' % motnum])
-            step = float(ibuf.data['a%dstep' % motnum])
-            stop = start + ((npts - 1) * step)
-            if step > 1.0e-7: # motor precision is less than this
-                motors_to_move.append(motnum)
-            header += '%3d   %11.5f%11.5f%11.5f\n' % (motnum, start, step, stop)
-        header += ' Mot:    Start       Step      End\n'
-        
-        data_keys = []
-        for motnum in motors_to_move:
-            data_keys.append('     A%d   ' % motnum) 
-        if tc_defined:
-            data_keys.append(' TEMP  ')
-            # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
-        if magnet_defined == None:
-            data_keys.append(' H-Field ')
-            # this mimics the ICP behaviour in which the H-field is only looked at if a magnet device is defined
-        data_keys.append('  MIN  ')
-        if not ibuf.data['Type'] == 'NEUT': 
-            data_keys.append('    MONITOR ')
-        data_keys.append('     COUNTS ')
-        if num_scalers > 1: 
-            data_keys.append('     EXTRA  ')
-        
-        # now generate the data header from the keys
-        for key in data_keys:
-            header += key
-        header += '\n'
-        
-        return header
-          
     
     def getHeader(self, filename):
         f_in = open(filename, 'r')
@@ -343,13 +247,13 @@ class ICPDataFile:
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
         header += ' %7.4f    %8.5f %7.5f %9.5f %4i ' % (wavelength, tstart, tincr, hfield, num_detectors)
-        if params['magnets_defined'] >0: # looks back into the calling parent, ic.  Make explicit?
+        if params['magnets_defined'] > 0: # looks back into the calling parent, ic.  Make explicit?
             Hinc = float(diff.get('h0', 0.0))
             Hconv = 1.000 # need to look up in MOTORS.BUF?
             header += '%7.4f %7.4f' % (Hinc, Hconv)
         header += '\n'
         header += ' Collimation      Mosaic    Wavelength   T-Start   Incr.   H-field #Det    '
-        if params['magnets_defined']>0: # looks back into the calling parent, ic.  Make explicit?
+        if params['magnets_defined'] > 0: # looks back into the calling parent, ic.  Make explicit?
             header += '  H-conv   H-Inc'
         header += '\n'
         
@@ -408,117 +312,73 @@ class ICPDataFile:
 #        return params
         
     def AddPoint(self, params, scan_def):
-        result = params['result']
-        outstr = ''
-        for movable in OrderedDict(scan_def['vary']):
-            outstr += '%11.5f ' % params[movable]
-        t_seconds = result['count_time'] / 10000.0
-        t_minutes = t_seconds / 60.0
-        #t_minutes = int(t_seconds / 60)
-        #t_seconds -= t_minutes * 60
-        #time_str = '%d:%02d ' % (t_minutes, t_seconds)
-        time_str = '%.2f ' % (t_minutes)
-        outstr += time_str
-        if params['scaler_gating_mode'] == 'TIME':
-            outstr += '%11g ' % result['monitor']
-        outstr += '%11g ' % result['counts']
-        Tnow = params.get('t0', None)
-        if Tnow is not None:
-            outstr += '%11g ' % Tnow
-        Hnow = params.get('h0', None)
-        if Hnow is not None:
-            outstr += '%11g ' % Hnow
-        outstr += '\n'
+        """ called to add a single data point to the file """  
+        point_str = format_point(params, scan_def) + '\n'
+        psd_str = ''
+        if params['result']['psd_data'] is not None:
+            psd_str = format_psddata(params['result']['psd_data']) + '\n'
         
-        with open(scan_def['filename'], 'a') as f:
-            f.write(outstr)    
+        open(scan_def['filename'], 'a').write(point_str + psd_str)    
         
-        if result['psd_data'] is not None:
-            # time to format and spit out the PSD data
-            psd_data = result['psd_data']
-            full_data_str = ''
-            data_str = ' '
-            dim1, dim2 = psd_data.shape
-            for j in range(dim2):
-                for i in range(dim1):                
-                    entry = psd_data[i,j]
-                    if i == dim1 - 1:
-                        if j == dim2 - 1:
-                            new_data_str = '%i' % entry # leave off comma on last point
-                        else:
-                            new_data_str = '%i;' % entry # end of row gets semicolon
-                    else:
-                        new_data_str = '%i,' % entry # regular data points get a comma afterward
-                    if ((len(new_data_str) + len(data_str)) > 80 ):
-                        print data_str
-                        full_data_str += data_str + '\n'
-                        data_str = ' ' + new_data_str
-                    else:
-                        data_str += new_data_str
-            print data_str
-            full_data_str += data_str + '\n'
+        
+    def AddPointTimestamped(self, params, scan_def, timestamp=None, time_str=None):
+        if timestamp is None: 
+            timestamp = '%.3f' % (time.time(),) # round to 3rd decimal place
+        if time_str is None: 
+            time_str = time.strftime(self.time_fmt)
+        point_str = format_point(params, scan_def)
+        point_str += timestamp + ' '
+        point_str += time_str + '\n'
+        psd_str = ''
+        if params['result']['psd_data'] is not None:
+            psd_str = format_psddata(params['result']['psd_data']) + '\n'
+        
+        open(scan_def['filename'], 'a').write(point_str + psd_str)
             
-            print scan_def
-            print full_data_str
-            with open(scan_def['filename'], 'a') as f:
-                f.write(full_data_str)
+
+def format_point(params, scan_def):
+    result = params['result']
+    outstr = ''
+    for movable in OrderedDict(scan_def['vary']):
+        outstr += '%11.5f ' % params[movable]
+    t_seconds = result['count_time'] / 10000.0
+    t_minutes = t_seconds / 60.0
+    #t_minutes = int(t_seconds / 60)
+    #t_seconds -= t_minutes * 60
+    #time_str = '%d:%02d ' % (t_minutes, t_seconds)
+    time_str = '%.2f ' % (t_minutes)
+    outstr += time_str
+    if params['scaler_gating_mode'] == 'TIME':
+        outstr += '%11g ' % result['monitor']
+    outstr += '%11g ' % result['counts']
+    Tnow = params.get('t0', None)
+    if Tnow is not None:
+        outstr += '%11g ' % Tnow
+    Hnow = params.get('h0', None)
+    if Hnow is not None:
+        outstr += '%11g ' % Hnow   
+    return outstr
         
-    def AddPointTimestamped(self, params, scan_def, timestamp=None):
-        result = params['result']
-        outstr = ''
-        for movable in OrderedDict(scan_def['vary']):
-            outstr += '%11.5f ' % params[movable]
-        t_seconds = result['count_time'] / 10000.0
-        t_minutes = t_seconds / 60.0
-        #t_minutes = int(t_seconds / 60)
-        #t_seconds -= t_minutes * 60
-        #time_str = '%d:%02d ' % (t_minutes, t_seconds)
-        time_str = '%.2f ' % (t_minutes)
-        outstr += time_str
-        if params['scaler_gating_mode'] == 'TIME':
-            outstr += '%11g ' % result['monitor']
-        outstr += '%11g ' % result['counts']
-        Tnow = params.get('t0', None)
-        if Tnow is not None:
-            outstr += '%11g ' % Tnow
-        Hnow = params.get('h0', None)
-        if Hnow is not None:
-            outstr += '%11g ' % Hnow
-        if timestamp==None:
-            outstr += time.srtftime(self.time_fmt)
-        else:
-            outstr += str(timestamp)
-        outstr += '\n'
-        
-        with open(scan_def['filename'], 'a') as f:
-            f.write(outstr)    
-        
-        if result['psd_data'] is not None:
-            # time to format and spit out the PSD data
-            psd_data = result['psd_data']
-            full_data_str = ''
-            data_str = ' '
-            dim1, dim2 = psd_data.shape
-            for j in range(dim2):
-                for i in range(dim1):                
-                    entry = psd_data[i,j]
-                    if i == dim1 - 1:
-                        if j == dim2 - 1:
-                            new_data_str = '%i' % entry # leave off comma on last point
-                        else:
-                            new_data_str = '%i;' % entry # end of row gets semicolon
-                    else:
-                        new_data_str = '%i,' % entry # regular data points get a comma afterward
-                    if ((len(new_data_str) + len(data_str)) > 80 ):
-                        print data_str
-                        full_data_str += data_str + '\n'
-                        data_str = ' ' + new_data_str
-                    else:
-                        data_str += new_data_str
-            print data_str
-            full_data_str += data_str + '\n'
-            
-            print scan_def
-            print full_data_str
-            with open(scan_def['filename'], 'a') as f:
-                f.write(full_data_str)
+                
+def format_psddata(psd_data):
+    full_data_str = ''
+    data_str = ' '
+    dim1, dim2 = psd_data.shape
+    for j in range(dim2):
+        for i in range(dim1):                
+            entry = psd_data[i,j]
+            if i == dim1 - 1:
+                if j == dim2 - 1:
+                    new_data_str = '%i' % entry # leave off comma on last point
+                else:
+                    new_data_str = '%i;' % entry # end of row gets semicolon
+            else:
+                new_data_str = '%i,' % entry # regular data points get a comma afterward
+            if ((len(new_data_str) + len(data_str)) > 80 ):
+                print data_str
+                full_data_str += data_str + '\n'
+                data_str = ' ' + new_data_str
+            else:
+                data_str += new_data_str
+    full_data_str += data_str
+    return full_data_str
