@@ -13,7 +13,8 @@ DET_SIZE = DET_DIMX * DET_DIMY;
 # is capable of transferring is (2^16 - 12). The 12 bytes are for the length, op, and arg ints
 # that preceed the returned data block.
 
-XFER_BLOCK_SIZE = 32768;
+XFER_BLOCK_SIZE = 1024;
+MAXBUF = 2**16
 
 """ All of the following constants were lifted straight from the DALI driver """
 
@@ -96,13 +97,14 @@ END_OF_STREAM = 0;
 SERVERPORT = 20000
 #SERVERHOST = "detector"
 SERVERHOST= "129.6.120.160"
-CMDWAIT = 500000
+CMDWAIT = 50000
 
 import socket, struct, time, os
 INTSIZE = struct.calcsize("I")
 DEBUG = True
 
 import socket, struct, time, os
+import StringIO
 
 class NISTO:
     """ reading and controlling area detectors using NISTO protocol """
@@ -137,6 +139,7 @@ class NISTO:
         return self.connection
         
     def tcp_close(self):
+	self.connection.shutdown(socket.SHUT_RDWR)
         self.connection.close()
         
     def sendPKG(self, connection, opcode, prm, data = None):
@@ -172,11 +175,13 @@ class NISTO:
         #mesg = connection.recv(XFER_BLOCK_SIZE)
         #if DEBUG: print 'message:', len(mesg), mesg[:10] 
         mesg_len = self.frombinstr(mesg_lenbytes)
-        if DEBUG: print "message coming: len=", mesg_len
-        mesg = connection.recv(mesg_len)
+        if DEBUG: print "message coming: requested length = ", mesg_len
+        #mesg = connection.recv(mesg_len)
+        mesg = connection.recv(MAXBUF)
+        if DEBUG: print "actual length: ", len(mesg)
         if len(mesg) < 2*INTSIZE:
             if DEBUG: print "message too short - returning"
-            return (None, None, None)
+            return (0, 0, None)
         opcode = self.frombinstr(mesg[:INTSIZE])
         prm = self.frombinstr(mesg[INTSIZE:2*INTSIZE])
         data_offset = 2*INTSIZE
@@ -193,14 +198,20 @@ class NISTO:
         return opcode, prm, data
         
     def recvHIST(self, connection):
-        data = ''
+        data = StringIO.StringIO()
+        expected_length = self.dims[0] * self.dims[1] * INTSIZE
+        if DEBUG: print 'expected length: ', str(expected_length)
         while 1:
             opcode, prm, newdata = self.recvPKG(connection)
             if not opcode == OP_DAT: break
-            data += newdata
-            if DEBUG: print prm
+            data.write(newdata)
+            if DEBUG: print "buflength: ", data.tell()
+            if data.tell() > expected_length: break
             self.sendPKG(connection, OP_ACK, prm)
-        hist = (self.numpy.fromstring(data, self.numpy.uint32)).byteswap()
+        data.seek(0)
+        datastr = data.read()
+        hist = (self.numpy.fromstring(datastr, self.numpy.uint32)).byteswap()
+        self.sendPKG(connection, OP_ACK, prm)
         return hist
 
     def AIM_INIT(self):
@@ -234,7 +245,7 @@ class NISTO:
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_GET, self.tobinstr(PAR_DIMENSIONS))
         opcode, prm, newdata = self.recvPKG(connection)
-        dims = (self.numpy.fromstring(data, self.numpy.uint32)).byteswap()
+        dims = (self.numpy.fromstring(newdata, self.numpy.uint32)).byteswap()
         self.tcp_close()
         self.dims = dims
         time.sleep(self.waittime)
@@ -255,7 +266,10 @@ class NISTO:
         if self.dims == None: # populate on first use
             time.sleep(self.waittime)
             self.dims = self.AIM_DIMS()
-        self.data.shape = self.dims
+        try: 
+            self.data.shape = self.dims
+        except:
+            pass
         time.sleep(self.waittime)
         return retn
         
@@ -275,3 +289,83 @@ class NISTO:
         
         
 
+"""
+int
+   242 sendPKG(int sockfd, int opcode, int prm, void * data, int ldata) 
+   243 {
+   244   unsigned char * ptr;
+   245   int retn, n;
+   246 
+   247   bzero(mesg,sizeof(mesg)); /* Clear out data */
+   248   ptr = &mesg[0];
+   249   if (data == NULL) ldata = 0;
+   250   n = 3 *sizeof(uint32_t) + ldata;
+   251   if ((opcode == OP_CMD) || (opcode == OP_ERR)) n += 1;
+   252   *(uint32_t *)ptr = (uint32_t) htonl(n - sizeof(uint32_t)); 
+   253   ptr += sizeof(uint32_t);
+   254   *(uint32_t *)ptr = (uint32_t) htonl(opcode);           
+   255   ptr += sizeof(uint32_t);
+   256   *(uint32_t *)ptr = (uint32_t) htonl(prm);              
+   257   ptr += sizeof(uint32_t);
+   258 
+   259   /* Write data as-is */
+   260   if (data != NULL) { 
+   261     memcpy(ptr,data,ldata); 
+   262     ptr += ldata;
+   263   }
+   264   if ((opcode == OP_CMD) || (opcode == OP_ERR)) *ptr = EOS; /* End of pkg */
+   265 
+   266   if (traceflag&2) {
+   267     printf("SendPKG:"); phex((char *)mesg,n);
+   268   }
+   269   if ((retn = write(sockfd,mesg,n)) != n) err_dump("send_PKG:write");
+   270   return retn;
+   271 }
+   272 
+   273 int
+   274 recvPKG(int sockfd, int * len, int * opcode, int * prm, void * data) {
+   275   int n;
+   276   char * ptr;
+   277   fd_set fds;  
+   278   struct timeval timeout;
+   279 
+   280   FD_ZERO(&fds); FD_SET(sockfd,&fds);
+   281   timeout.tv_sec = to_sec; timeout.tv_usec=0;
+   282   n=select(sockfd+1,&fds,(fd_set*)NULL,(fd_set*)NULL,&timeout);
+   283   if (n<0) {
+   284     fprintf(stderr,"recvPKG: select failed\n");
+   285     return -1;
+   286   }
+   287   if (n==0) {
+   288     if (traceflag) { printf("recvPKG: timed out\n"); }
+   289     return -2; /* timeout */
+   290   }
+   291 
+   292   bzero(mesg,sizeof(mesg));
+   293   n = -1;
+   294   while(n<0){
+   295     n = read(sockfd, (char *)mesg, sizeof(mesg));
+   296   }
+   297   if (n == 0) return -3; /* Empty message */
+   298 
+   299   /* Check number of bytes read */
+   300   ptr = &mesg[0];
+   301   *len = ntohl(*(uint32_t *)ptr);     ptr += sizeof(uint32_t);
+   302   *opcode = ntohl(*(uint32_t *) ptr); ptr += sizeof(uint32_t);
+   303   *prm    = ntohl(*(uint32_t *) ptr); ptr += sizeof(uint32_t);
+   304   *len   -= 2 * sizeof(uint32_t); /* Return length of data, NOT package */
+   305   if ((*opcode == OP_CMD) || (*opcode == OP_ERR)) *len -= 1;
+   306   if (data != NULL) {
+   307     /* Pass data as-is */
+   308     memcpy(data, ptr, (*len));
+   309   }
+   310 
+   311   if (traceflag&2) {
+   312     printf("recvPKG:"); phex((char *)mesg,*len + 2*sizeof(uint32_t));
+   313     printf("recvPKG: OP = %d PRM = %d len = %d recvlen = %d\n",
+   314 	   *opcode, *prm, *len, n);
+   315   }
+   316   
+   317   return *opcode;
+   318 }
+"""

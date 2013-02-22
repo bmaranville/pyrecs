@@ -78,7 +78,8 @@ class PSDControlMixin:
         xmin, ymin, xmax, ymax, numx, numy = self.ip.GetROI()
         
         # overwriting the counts from the scaler with the ones from the PSD:
-        counts = (psd_data[xmin:xmax+1,ymin:ymax+1]).sum() # psd_data is a numpy array, with sum method available
+        #counts = (psd_data[xmin:xmax+1,ymin:ymax+1]).sum() # psd_data is a numpy array, with sum method available
+        counts = psd_data.sum()
         result = {'count_time': count_time, 'monitor': monitor, 'counts': counts, 'elapsed_time': elapsed_time, 'psd_data': psd_data}
         self.state['result'].update(result)
         return result
