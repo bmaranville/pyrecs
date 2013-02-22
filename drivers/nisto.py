@@ -172,12 +172,11 @@ class NISTO:
         #mesg = connection.recv(XFER_BLOCK_SIZE)
         #if DEBUG: print 'message:', len(mesg), mesg[:10] 
         mesg_len = self.frombinstr(mesg_lenbytes)
-        if mesg_len < 2*INTSIZE:
-            if DEBUG: print "zero-length message - returning"
-            return (None, None, None)
-        else:
-            if DEBUG: print "message coming: len=", mesg_len
+        if DEBUG: print "message coming: len=", mesg_len
         mesg = connection.recv(mesg_len)
+        if len(mesg) < 2*INTSIZE:
+            if DEBUG: print "message too short - returning"
+            return (None, None, None)
         opcode = self.frombinstr(mesg[:INTSIZE])
         prm = self.frombinstr(mesg[INTSIZE:2*INTSIZE])
         data_offset = 2*INTSIZE
@@ -187,7 +186,7 @@ class NISTO:
             data_offset += 1
         if data_len > 0:
             data = mesg[data_offset:data_offset + data_len]
-        else: data = 0
+        else: data = ""
             
         if DEBUG:
             print 'RECV: opcode = ' + str(opcode) + ', prm = ' + str(prm) + ', data = ' + str(data)
@@ -234,11 +233,12 @@ class NISTO:
         # this command changed from HISTO to NISTO...
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_GET, self.tobinstr(PAR_DIMENSIONS))
-        retn = self.recvHIST(connection)
+        opcode, prm, newdata = self.recvPKG(connection)
+        dims = (self.numpy.fromstring(data, self.numpy.uint32)).byteswap()
         self.tcp_close()
-        self.dims = tuple(retn)
+        self.dims = dims
         time.sleep(self.waittime)
-        return retn
+        return dims
         
     def AIM_XFER(self):
         # this has changed from HISTO to NISTO
@@ -253,6 +253,7 @@ class NISTO:
         self.tcp_close()
         self.data = retn
         if self.dims == None: # populate on first use
+            time.sleep(self.waittime)
             self.dims = self.AIM_DIMS()
         self.data.shape = self.dims
         time.sleep(self.waittime)
