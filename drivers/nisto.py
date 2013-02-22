@@ -240,7 +240,7 @@ class NISTO:
         # this has changed from HISTO to NISTO
         #blocksize = 1024
         connection = self.tcp_open()
-        self.sendPKG(connection, OP_CMD, CMD_XFER, struct.pack('I', XFER_BLOCK_SIZE))
+        self.sendPKG(connection, OP_CMD, CMD_XFER, self.tobinstr(XFER_BLOCK_SIZE))
         start_time = time.time()
         retn = self.recvHIST(connection)
         end_time = time.time()
