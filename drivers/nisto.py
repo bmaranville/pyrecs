@@ -172,7 +172,11 @@ class NISTO:
         #mesg = connection.recv(XFER_BLOCK_SIZE)
         #if DEBUG: print 'message:', len(mesg), mesg[:10] 
         mesg_len = self.frombinstr(mesg_lenbytes)
-        if DEBUG: print "message coming: len=", mesg_len
+        if mesg_len < 2*INTSIZE:
+            if DEBUG: print "zero-length message - returning"
+            return (None, None, None)
+        else:
+            if DEBUG: print "message coming: len=", mesg_len
         mesg = connection.recv(mesg_len)
         opcode = self.frombinstr(mesg[:INTSIZE])
         prm = self.frombinstr(mesg[INTSIZE:2*INTSIZE])
