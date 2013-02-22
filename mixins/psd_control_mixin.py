@@ -41,6 +41,8 @@ class PSDControlMixin:
             if self.psd is not None:
                 self.Count = self.PSDCount
                 self._psd_active = True
+                if self.psd.dims is None:
+                    self.psd.AIM_DIMS()
         else: # disable it, re-enable pencil detector, make Count do PencilCount
             self.Count = self.PencilCount
             self._psd_active = False
