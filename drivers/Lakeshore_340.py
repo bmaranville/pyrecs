@@ -32,7 +32,7 @@ class Lakeshore340(TemperatureController):
     def updateSettings(self, keyword, value):
         self.settings[keyword] = value
         if keyword in ['control_sensor', 'units', 'control_loop']:
-            self.SetControlLoop()
+            self.setControlLoop()
     
     def initSerial(self):
         self.serial = serial.Serial(self.port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
@@ -84,7 +84,8 @@ class Lakeshore340(TemperatureController):
     def getTemp(self, sensor = None):
         if sensor is None: sensor = self.settings['sample_sensor']
         """ retrieve the temperature of the sample thermometer """
-        reply_str = self.sendCommand('SRDG? %s' % sensor, reply_expected = True)
+        read_str = {1: "K", 2: "C", 3: "S"}
+        reply_str = self.sendCommand('%sRDG? %s' % (read_str[self.settings['units']], sensor), reply_expected = True)
         temperature  = float(reply_str)
         return temperature
         

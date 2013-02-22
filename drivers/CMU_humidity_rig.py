@@ -6,6 +6,25 @@ calibrations = {
     2: lambda T_raw: T_raw*0.97398 - 0.58107
 }
 
+"""
+Converting relative humidity to voltage and vice-versa:
+The voltage setpoint is a function of the set temperature (T_set), humidity setpoint (Rh_set) and a voltage (V_ps) value on the controller. 
+The humidity is a function of the calibrated sample temperature (T_cal), the voltage sensor reading (V_read) and V_ps. 
+
+V_ps will be a fixed value and I will get it to you once we have it. == 5.06
+
+Convert from T_set and Rh_set to V_set -- V_set = ((0.00721 - 2.371089*10^-5*T_set)*Rh_set + 0.13471)*V_ps
+Convert from V_read and T_cal to Rh_read -- Rh_read = ((V_read/V_ps) - 0.13471)/(0.00721 - 2.371089*10^-5*T_cal)
+"""
+
+def getVSet(T_set, Rh_set, V_ps=5.06):
+    return ((0.00721 - 2.371089e-5*T_set)*Rh_set + 0.13471)*V_ps
+    
+def getRH(V_read, T_cal, V_ps=5.06):
+    return ((V_read/V_ps) - 0.13471)/(0.00721 - 2.371089e-5*T_cal)
+
+V_PS = 5.06 # this is the voltage to the power pin on the humidity sensor
+
 class Lakeshore340Humidity(TemperatureController):
     """ driver for serial connection to Lakeshore 340 Temperature Controller """
     label = 'Lakeshore 331/340 (Humidity)'
@@ -39,7 +58,7 @@ class Lakeshore340Humidity(TemperatureController):
     def updateSettings(self, keyword, value):
         self.settings[keyword] = value
         if keyword in ['control_sensor', 'units', 'control_loop']:
-            self.SetControlLoop()
+            self.setControlLoop()
     
     def initSerial(self):
         self.serial = serial.Serial(self.port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
@@ -87,13 +106,26 @@ class Lakeshore340Humidity(TemperatureController):
         """ send a new temperature setpoint to the temperature controller """
         self.sendCommand('SETP %d,%7.3f' % (self.settings['control_loop'], new_setpoint), reply_expected = False)
         return
+    
+    def setAnalog(self, new_voltage, bipolar_enable=1):
+        """ set the analog output 2 of Lakeshore controller """
+        manual_value = new_voltage * 10.0 # output is specified as percentage of 10V
+        mode = 2 # manual setting of voltage
+        self.sendCommand('ANALOG 2, %d, %d, , , , , %.3f' % (bipolar_enable, mode, manual_value), reply_expected = False)
+        return
         
-    def getTemp(self, sensor = None):
+    def getAnalog(self):
+        manual_value = self.sendCommand('AOUT? 2', reply_expected=True)
+        return float(manual_value) / 10.0 # again, it is returned as a % of 10V
+    
+    def getTemp(self, sensor = None, units=None):
         if sensor is None: sensor = self.settings['sample_sensor']
+        if units is None: units = self.settings['units']
         """ retrieve the temperature of the sample thermometer """
-        reply_str = self.sendCommand('SRDG? %s' % sensor, reply_expected = True)
+        read_str = {1: "K", 2: "C", 3: "S"}
+        reply_str = self.sendCommand('%sRDG? %s' % (read_str[units], sensor), reply_expected = True)
         temperature  = float(reply_str)
-        return temperature
+        return temperature 
         
     def getAuxTemp(self):
         return self.getControlTemp()
@@ -117,9 +149,22 @@ class Lakeshore340Humidity(TemperatureController):
     def getControlTemp(self):
         """ retrieve the temperature of the control thermometer """
         return self.getTemp(sensor = self.settings['control_sensor'])
-
-
         
+    def getRH(self):
+        V_read = self.getTemp(sensor='A', units=3)
+        T_raw = self.getTemp(sensor='B', units=2)
+        calibration_function = calibrations[self.settings['thermometer_calibration']]
+        T_cal = calibration_function(T_raw)
+        print "V_read, T_raw, T_cal:", V_read, T_raw, T_cal
+        RH = ((V_read/V_PS) - 0.13471)/(0.00721 - 2.371089e-5*T_cal)
+        return RH
+        
+    def setRH(self, Rh_set, T_set):
+        V_set = ((0.00721 - 2.371089e-5*T_set)*Rh_set + 0.13471)*V_PS
+        self.RH_setpoint = Rh_set
+        self.setTemp(V_set)
+        
+                
 class CommunicationsError(Exception):
     """ To be thrown when serial communications fail """
     def __init__(self, device_name, error_type):

@@ -67,7 +67,7 @@ class PetiteFleur(TemperatureController):
                 
     def setTemp(self, new_setpoint):        
         """ send a new temperature setpoint to the temperature controller """
-        self.sendCommand('OUT_SP_%02d %7.3f' % (self.settings['control_loop'], new_setpoint), reply_expected = False)
+        print self.sendCommand('OUT_SP_%02d %6.2f' % (self.settings['control_loop'], new_setpoint), reply_expected = False)
         return
         
     def getTemp(self, sensor = None):

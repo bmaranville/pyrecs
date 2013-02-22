@@ -148,28 +148,28 @@ class BrookhavenDetector:
     def AIM_INIT(self):
         connection = self.tcp_open()
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         
     def AIM_CLEAR(self):
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_CLEAR)
         retn = self.recvPKG(connection)
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         
     def AIM_ARM(self):
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_START)
         retn = self.recvPKG(connection)
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         
     def AIM_DISARM(self):
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_STOP)
         retn = self.recvPKG(connection)
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
 
     def AIM_DIMS(self):
         connection = self.tcp_open()
@@ -177,7 +177,7 @@ class BrookhavenDetector:
         retn = self.recvHIST(connection)
         self.tcp_close()
         self.dims = tuple(retn)
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         return retn
         
     def AIM_XFER(self):
@@ -194,7 +194,7 @@ class BrookhavenDetector:
         if self.dims == None: # populate on first use
             self.dims = self.AIM_DIMS()
         self.data.shape = self.dims
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         return retn
         
     def AIM_SAVE(self, filename = 'asd.raw'):

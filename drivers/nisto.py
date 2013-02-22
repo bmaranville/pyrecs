@@ -94,12 +94,15 @@ END_OF_STREAM = 0;
 
 # from tcp_aim.c
 SERVERPORT = 20000
-SERVERHOST = "detector"
+#SERVERHOST = "detector"
+SERVERHOST= "129.6.120.160"
 CMDWAIT = 500000
 
 import socket, struct, time, os
 INTSIZE = struct.calcsize("I")
-DEBUG = False
+DEBUG = True
+
+import socket, struct, time, os
 
 class NISTO:
     """ reading and controlling area detectors using NISTO protocol """
@@ -156,17 +159,24 @@ class NISTO:
         
         if (opcode == OP_CMD) or (opcode == OP_ERR): mesg += '\x00'
         #if (opcode == OP_CMD) or (opcode == OP_ERR): mesg += struct.pack('b', END_OF_STREAM)
-        if DEBUG: print mesg
+        if DEBUG: print 'SEND: opcode = ' + str(opcode) + ', prm = ' + str(prm) + ', data = ' + str(data)
         if connection.send(mesg) != n:
             print "error: send_PKG: not all bytes written"
             
         
     def recvPKG(self, connection):
-        mesg = connection.recv(MAXBUF)
-        mesg_len = self.frombinstr(mesg[:INTSIZE])
-        opcode = self.frombinstr(mesg[INTSIZE:2*INTSIZE])
-        prm = self.frombinstr(mesg[2*INTSIZE:3*INTSIZE])
-        data_offset = 3*INTSIZE
+        mesg_lenbytes = connection.recv(INTSIZE)
+        if len(mesg_lenbytes) < INTSIZE: 
+            if DEBUG: print str(len(mesg_lenbytes)) + ' mesglen bytes received - expecting %d' % INTSIZE
+            return (None, None, None)
+        #mesg = connection.recv(XFER_BLOCK_SIZE)
+        #if DEBUG: print 'message:', len(mesg), mesg[:10] 
+        mesg_len = self.frombinstr(mesg_lenbytes)
+        if DEBUG: print "message coming: len=", mesg_len
+        mesg = connection.recv(mesg_len)
+        opcode = self.frombinstr(mesg[:INTSIZE])
+        prm = self.frombinstr(mesg[INTSIZE:2*INTSIZE])
+        data_offset = 2*INTSIZE
         data_len = mesg_len - (2*INTSIZE)
         if (opcode == OP_CMD) or (opcode == OP_ERR): 
             data_len -= 1
@@ -176,7 +186,7 @@ class NISTO:
         else: data = 0
             
         if DEBUG:
-            print 'opcode = ' + str(opcode) + ', prm = ' + str(prm) + ', data = ' + str(data)
+            print 'RECV: opcode = ' + str(opcode) + ', prm = ' + str(prm) + ', data = ' + str(data)
         return opcode, prm, data
         
     def recvHIST(self, connection):
@@ -193,37 +203,37 @@ class NISTO:
     def AIM_INIT(self):
         connection = self.tcp_open()
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         
     def AIM_CLEAR(self):
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_CLEAR)
         retn = self.recvPKG(connection)
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         
     def AIM_ARM(self):
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_START)
         retn = self.recvPKG(connection)
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         
     def AIM_DISARM(self):
         connection = self.tcp_open()
         self.sendPKG(connection, OP_CMD, CMD_STOP)
         retn = self.recvPKG(connection)
         self.tcp_close()
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
 
     def AIM_DIMS(self):
         # this command changed from HISTO to NISTO...
         connection = self.tcp_open()
-        self.sendPKG(connection, OP_CMD, CMD_GET, struct.pack('I', PAR_DIMENSIONS))
+        self.sendPKG(connection, OP_CMD, CMD_GET, self.tobinstr(PAR_DIMENSIONS))
         retn = self.recvHIST(connection)
         self.tcp_close()
         self.dims = tuple(retn)
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         return retn
         
     def AIM_XFER(self):
@@ -241,7 +251,7 @@ class NISTO:
         if self.dims == None: # populate on first use
             self.dims = self.AIM_DIMS()
         self.data.shape = self.dims
-        time.wait(self.waittime)
+        time.sleep(self.waittime)
         return retn
         
     def AIM_SAVE(self, filename = 'asd.raw'):

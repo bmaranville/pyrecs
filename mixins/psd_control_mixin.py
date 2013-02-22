@@ -1,5 +1,6 @@
 from pyrecs.drivers.brookhaven_psd import BrookhavenDetector
 from pyrecs.drivers.nisto import NISTO
+import time
 
 INSTALLED_PSD = NISTO
 

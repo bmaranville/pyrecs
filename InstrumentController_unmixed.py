@@ -1262,7 +1262,7 @@ class InstrumentController:
             self.write( " Error: No temperature controller defined ")
         else:
             for i, tc in enumerate(self._tc):
-                self.write('temp controller %d: setpoint = %.4f, tnow = %.4f' % (i+1, tc.getSetpoint(), tc.getTemp()))           
+                self.write('temp controller %d: setpoint = %.4f, t_sample = %.4f, t_control= %.4f\n' % (i+1, tc.getSetpoint(), tc.getSampleTemp(), tc.getControlTemp()))           
     
     def SetTemperature(self, temperature):
         if self._tc == []:
