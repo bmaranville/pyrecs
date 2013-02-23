@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from pyrecs.gui.wx import motorpanel
+from pyrecs.gui.wx.motorpanel import AbortPanel
 import wx
 import xmlrpclib
 import threading
@@ -92,12 +92,6 @@ class MyFrame(wx.Frame):
         for panel in self.panels.values():
             panel.motors_enabled = motors_enabled
             panel.__do_layout()     
-
-
-
-
-            
-
 
 
 
