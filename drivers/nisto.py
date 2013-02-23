@@ -101,7 +101,7 @@ CMDWAIT = 50000
 
 import socket, struct, time, os
 INTSIZE = struct.calcsize("I")
-DEBUG = True
+DEBUG = False
 
 import socket, struct, time, os
 import StringIO
