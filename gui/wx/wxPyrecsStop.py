@@ -1,11 +1,18 @@
 #!/usr/bin/python
 
+import site, os
+dirname = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+print dirname
+site.addsitedir(dirname) 
+
 from pyrecs.gui.wx.motorpanel import AbortPanel
 import wx
 import xmlrpclib
 import threading
 import socket
 from pyrecs.ordered_dict import OrderedDict
+
+HOSTNAME = socket.getfqdn()
 
 class XMLRPCAbortPanel(AbortPanel):
     icsig = xmlrpclib.ServerProxy('http://'+HOSTNAME+':8000')
@@ -93,5 +100,20 @@ class MyFrame(wx.Frame):
             panel.motors_enabled = motors_enabled
             panel.__do_layout()     
 
+# end of class MainFrame
+class MyApp(wx.App):
+    def OnInit(self):
+        wx.InitAllImageHandlers()
+        frame_1 = MyFrame(None, -1, "")
+        self.SetTopWindow(frame_1)
+        frame_1.Show()
+        return 1
+        
+    
 
+# end of class MyApp
+
+if __name__ == "__main__":
+    StopButton = MyApp(0)
+    StopButton.MainLoop()
 

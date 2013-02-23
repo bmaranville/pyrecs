@@ -1429,9 +1429,10 @@ class InstrumentController:
         
         return scan_states
                 
-    def RunScan(self, scan_definition, auto_increment_file=True, gnuplot=True):
+    def RunScan(self, scan_definition, auto_increment_file=True, gnuplot=True, this_publisher=None):
         """runs a scan_definition with default publishers and FindPeak publisher """
-        publishers = self.default_publishers + [publisher.RunScanPublisher()]
+        if this_publisher is None: this_publisher = ICPDataFile.ICPDataFilePublisher()
+        publishers = self.default_publishers + [this_publisher,]
         if gnuplot == True: publishers.append(GnuplotPublisher(auto_poisson_errorbars=False))
         new_scan_def = deepcopy(scan_definition)
         
@@ -1446,10 +1447,10 @@ class InstrumentController:
         for datapoint in scan:
             pass # everything gets done in the iterator
     
-    def RunScanFile(self, json_filename):
+    def RunScanFile(self, json_filename, this_publisher=None):
         """ opens and runs a scan from a definition in a json file """
         scan_definition = simplejson.loads(open(json_filename,'r').read())
-        self.RunScan(scan_definition)
+        self.RunScan(scan_definition, this_publisher=this_publisher)
     
     def DryRunScanFile(self, json_filename):
         """ opens and runs a scan from a definition in a json file """

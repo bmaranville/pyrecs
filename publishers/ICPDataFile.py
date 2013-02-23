@@ -269,8 +269,10 @@ class ICPDataFile:
         
         data_keys = []
         motors_to_move = [m for m in motnames if m in scan_expr.keys()]
-        for motname in motors_to_move:
-            data_keys.append('     %s   ' % motname.upper()) 
+        for movable in OrderedDict(scan_def['vary']):
+            data_keys.append('     %s   ' % movable.upper()) 
+        #for motname in motors_to_move:
+        #    data_keys.append('     %s   ' % motname.upper()) 
         for i in range(params['temp_controllers_defined']): 
             data_keys.append(' TEMP%d ' % i)
             # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
@@ -383,7 +385,6 @@ def format_psddata(psd_data):
             else:
                 new_data_str = '%i,' % entry # regular data points get a comma afterward
             if ((len(new_data_str) + len(data_str)) > 80 ):
-                print data_str
                 full_data_str += data_str + '\n'
                 data_str = ' ' + new_data_str
             else:
