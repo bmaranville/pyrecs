@@ -3,6 +3,7 @@ from pyrecs.drivers.nisto import NISTO
 import time
 
 INSTALLED_PSD = NISTO
+MAX_RETRIES = 5
 
 class PSDControlMixin:
     """ 
@@ -73,7 +74,7 @@ class PSDControlMixin:
         count_time, monitor, counts = self.scaler.GetCounts()
         elapsed_time = self.scaler.GetElapsed()
         psd.AIM_DISARM()
-        psd_data = psd.AIM_XFER()
+        psd_data = psd.AIM_XFER(max_retries=MAX_RETRIES)
         self.psd_data = psd_data
         psd.AIM_SAVE('asd.raw')
         

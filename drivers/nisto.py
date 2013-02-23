@@ -251,27 +251,27 @@ class NISTO:
         time.sleep(self.waittime)
         return dims
         
-    def AIM_XFER(self):
+    def AIM_XFER(self, max_retries=5, current_try=0):
         # this has changed from HISTO to NISTO
         #blocksize = 1024
-        connection = self.tcp_open()
-        self.sendPKG(connection, OP_CMD, CMD_XFER, self.tobinstr(XFER_BLOCK_SIZE))
-        start_time = time.time()
-        retn = self.recvHIST(connection)
-        end_time = time.time()
-        xfer_time = end_time - start_time
-        print 'data transferred in %.1f seconds\n' % xfer_time
-        self.tcp_close()
-        self.data = retn
-        if self.dims == None: # populate on first use
+        if current_try >= max_retries: return self.numpy.array([0])
+        try:
+            connection = self.tcp_open()
+            self.sendPKG(connection, OP_CMD, CMD_XFER, self.tobinstr(XFER_BLOCK_SIZE))
+            start_time = time.time()
+            retn = self.recvHIST(connection)
+            end_time = time.time()
+            xfer_time = end_time - start_time
+            print 'data transferred in %.1f seconds\n' % xfer_time
+            self.tcp_close()
+            self.data = retn
+            if self.dims is not None:
+                self.data.shape = self.dims
             time.sleep(self.waittime)
-            self.dims = self.AIM_DIMS()
-        try: 
-            self.data.shape = self.dims
+            return retn
         except:
-            pass
-        time.sleep(self.waittime)
-        return retn
+            time.sleep(self.waittime)
+            return self.AIM_XFER(max_retries=max_retries, current_try=current_try+1)
         
     def AIM_SAVE(self, filename = 'asd.raw'):
         fn = os.path.join(self.path, filename)
