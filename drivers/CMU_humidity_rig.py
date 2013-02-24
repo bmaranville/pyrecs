@@ -34,7 +34,7 @@ class Lakeshore340Humidity(TemperatureController):
         self.setpoint = 0.0
         self.serial_eol = '\n'
         self.settings = {
-            'sample_sensor': 'A',
+            'sample_sensor': 'B',
             'control_sensor': 'A',
             'record': 'all',
             'units': 1,
@@ -44,7 +44,7 @@ class Lakeshore340Humidity(TemperatureController):
             }
         self.sensors = {'A': "Sensor A", 'B':"Sensor B"}
         valid_record = self.sensors.copy()
-        valid_record.update({'setpoint':"Setpoint", 'all':"Record all"})
+        valid_record.update({'setpoint':"Setpoint", 'RH': 'RH', 'T_raw': 'T_raw', 'T_cal': 'T_cal', 'all':"Record all"})
         self.valid_settings = {
             'sample_sensor': self.sensors,
             'control_sensor': self.sensors,
@@ -89,7 +89,8 @@ class Lakeshore340Humidity(TemperatureController):
             sensor_name = self.sensors[sensor]
             sensor_value = self.getTemp(sensor)
             state[sensor_name] = sensor_value
-        state['Setpoint'] = self.getSetpoint() 
+        state['Setpoint'] = self.getSetpoint()
+        state.update(self.getRH())
         return state
         
     def setControlLoop(self, on_off = 1):
@@ -150,14 +151,14 @@ class Lakeshore340Humidity(TemperatureController):
         """ retrieve the temperature of the control thermometer """
         return self.getTemp(sensor = self.settings['control_sensor'])
         
-    def getRH(self):
+    def getRH(self, print_vars=True):
         V_read = self.getTemp(sensor='A', units=3)
         T_raw = self.getTemp(sensor='B', units=2)
         calibration_function = calibrations[self.settings['thermometer_calibration']]
         T_cal = calibration_function(T_raw)
-        print "V_read, T_raw, T_cal:", V_read, T_raw, T_cal
+        if print_vars == True: print "V_read, T_raw, T_cal:", V_read, T_raw, T_cal
         RH = ((V_read/V_PS) - 0.13471)/(0.00721 - 2.371089e-5*T_cal)
-        return RH
+        return {'RH': RH, 'V_read', V_read, 'T_raw': T_raw, 'T_cal': T_cal} 
         
     def setRH(self, Rh_set, T_set):
         V_set = ((0.00721 - 2.371089e-5*T_set)*Rh_set + 0.13471)*V_PS
