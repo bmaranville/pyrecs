@@ -37,7 +37,7 @@ class Lakeshore340Humidity(TemperatureController):
             'sample_sensor': 'B',
             'control_sensor': 'A',
             'record': 'all',
-            'units': 1,
+            'units': 3,
             'control_loop': 1,
             'thermometer_calibration': 1, # applied to sample sensor
             'serial_port': '/dev/ttyUSB6'
