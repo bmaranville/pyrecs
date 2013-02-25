@@ -13,6 +13,7 @@ DET_SIZE = DET_DIMX * DET_DIMY;
 # is capable of transferring is (2^16 - 12). The 12 bytes are for the length, op, and arg ints
 # that preceed the returned data block.
 
+# This could probably be raised to 65536/bytes_per_int = 16384
 XFER_BLOCK_SIZE = 1024;
 MAXBUF = 2**16
 
@@ -31,9 +32,32 @@ OP_DAT = 3;
 """ Error, see error codes """
 OP_ERR = 4;
 
-"""
- * Command Syntax defines
- """
+
+# Define error codes
+
+ERR_UNDEF	= 0 #/* Undefined error */
+ERR_ACCESS	= 1 #/* */
+ERR_BADOP	= 2 #/* Bad opcode */
+ERR_BADID	= 3 #/* Bad parameter */
+ERR_STATE	= 4 #/* Run state not appropriate for action */
+ERR_ARGS	= 5 #/* Wrong number of arguments */
+ERR_INVAL   = 6 #/* Bad value for parameter */
+ERR_BOUNDS  = 7 #/* Boundary error */
+
+ERR_CODES = {
+    0: "Undefined error"
+    1: "Access error"
+    2: "Bad opcode"
+    3: "Bad parameter"
+    4: "Run state not appropriate for action"
+    5: "Wrong number of arguments"
+    6: "Bad value for parameter"
+    7: "Boundary error"
+}
+
+
+# Command Syntax defines
+
 """ No operation """
 CMD_NOP = 0;
 """ Arm """
@@ -172,8 +196,7 @@ class NISTO:
         if len(mesg_lenbytes) < INTSIZE: 
             if DEBUG: print str(len(mesg_lenbytes)) + ' mesglen bytes received - expecting %d' % INTSIZE
             return (None, None, None)
-        #mesg = connection.recv(XFER_BLOCK_SIZE)
-        #if DEBUG: print 'message:', len(mesg), mesg[:10] 
+            
         mesg_len = self.frombinstr(mesg_lenbytes)
         if DEBUG: print "message coming: requested length = ", mesg_len
         #mesg = connection.recv(mesg_len)
