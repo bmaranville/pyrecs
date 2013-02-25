@@ -269,8 +269,10 @@ class ICPDataFile:
         
         data_keys = []
         motors_to_move = [m for m in motnames if m in scan_expr.keys()]
-        for motname in motors_to_move:
-            data_keys.append('     %s   ' % motname.upper()) 
+        for movable in OrderedDict(scan_def['vary']):
+            data_keys.append('     %s   ' % movable.upper()) 
+        #for motname in motors_to_move:
+        #    data_keys.append('     %s   ' % motname.upper()) 
         for i in range(params['temp_controllers_defined']): 
             data_keys.append(' TEMP%d ' % i)
             # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
@@ -341,6 +343,14 @@ def format_point(params, scan_def):
     outstr = ''
     for movable in OrderedDict(scan_def['vary']):
         outstr += '%11.5f ' % params[movable]
+        
+    for i in range(params['temp_controllers_defined']):
+        Tnow = params.get('t%d' % i, -999.)
+        outstr += '%11g ' % Tnow
+        # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
+    for i in range(params['magnets_defined']):
+        Hnow = params.get('h%d' % i, -999.)
+        outstr += '%11g ' % Hnow            
     t_seconds = result['count_time'] / 10000.0
     t_minutes = t_seconds / 60.0
     #t_minutes = int(t_seconds / 60)
@@ -350,13 +360,13 @@ def format_point(params, scan_def):
     outstr += time_str
     if params['scaler_gating_mode'] == 'TIME':
         outstr += '%11g ' % result['monitor']
-    outstr += '%11g ' % result['counts']
-    Tnow = params.get('t0', None)
-    if Tnow is not None:
-        outstr += '%11g ' % Tnow
-    Hnow = params.get('h0', None)
-    if Hnow is not None:
-        outstr += '%11g ' % Hnow   
+    outstr += '%11g ' % result['counts']    
+    #Tnow = params.get('t0', None)
+    #if Tnow is not None:
+    #    outstr += '%11g ' % Tnow
+    #Hnow = params.get('h0', None)
+    #if Hnow is not None:
+    #    outstr += '%11g ' % Hnow   
     return outstr
         
                 
@@ -375,7 +385,6 @@ def format_psddata(psd_data):
             else:
                 new_data_str = '%i,' % entry # regular data points get a comma afterward
             if ((len(new_data_str) + len(data_str)) > 80 ):
-                print data_str
                 full_data_str += data_str + '\n'
                 data_str = ' ' + new_data_str
             else:

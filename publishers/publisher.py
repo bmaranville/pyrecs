@@ -31,9 +31,9 @@ class Publisher:
 
 class RunScanPublisher(Publisher):
     fileManifest = FileManifest()
-    def publish_start(self, state, scan_def):
+    def publish_start(self, state, scan_def, **kwargs):
         state.setdefault('monitor', 0.0) # typically don't measure monitor before findpeak
-        self.fileManifest.publish_start(state, scan_def)
+        self.fileManifest.publish_start(state, scan_def, **kwargs)
         header = '# Scan definition: \n'
         scan_def_lines = pprint.pformat(scan_def, indent=4).split('\n')
         for line in scan_def_lines:
@@ -45,15 +45,43 @@ class RunScanPublisher(Publisher):
         with open(scan_def['filename'], 'w') as f:
             f.write(header)
             
-    def publish_datapoint(self, state, scan_def):
+    def publish_datapoint(self, state, scan_def, **kwargs):
         outstr = ''
         for movable in OrderedDict(scan_def['vary']):
             #outstr += '%10.4f    ' % state[movable]
             outstr += '%14g    ' % state[movable]
         outstr += '%14g\n' % state['result']['counts']
+        
+        psd_str = ''
+        if state['result']['psd_data'] is not None:
+            psd_str = format_psddata(state['result']['psd_data']) + '\n'
+        outstr += psd_str
+        
         with open(scan_def['filename'], 'a') as f:
             f.write(outstr)
             
-    def publish_end(self, state, scan_def):
-        self.fileManifest.publish_filecreation(state, scan_def)
+    def publish_end(self, state, scan_def, **kwargs):
+        self.fileManifest.publish_filecreation(state, scan_def, **kwargs)
         self.fileManifest.publish_end(state, scan_def)
+        
+def format_psddata(psd_data):
+    full_data_str = ''
+    data_str = ' '
+    dim1, dim2 = psd_data.shape
+    for j in range(dim2):
+        for i in range(dim1):                
+            entry = psd_data[i,j]
+            if i == dim1 - 1:
+                if j == dim2 - 1:
+                    new_data_str = '%i' % entry # leave off comma on last point
+                else:
+                    new_data_str = '%i;' % entry # end of row gets semicolon
+            else:
+                new_data_str = '%i,' % entry # regular data points get a comma afterward
+            if ((len(new_data_str) + len(data_str)) > 80 ):
+                full_data_str += data_str + '\n'
+                data_str = ' ' + new_data_str
+            else:
+                data_str += new_data_str
+    full_data_str += data_str
+    return full_data_str

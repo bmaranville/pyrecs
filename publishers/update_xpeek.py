@@ -100,7 +100,6 @@ class xpeek_broadcast:
         if TEST: 
             print outstr
         else:
-            print outstr
             self.bcast_sock.sendto(outstr, (self.host, self.port))
         
     def new_point(self, position, counts, pointnum = None, vary = None, instrument_name=None, count_time=None):
