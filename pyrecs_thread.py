@@ -690,6 +690,7 @@ stop counting, and retrieve result.
                 returns: (position, counts, elapsed_time) """
         
         (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        os.close(tmp_fd) # to be opened by name
         title = 'ic.RapidScan(%d, %.4f, %.4f)' % (motornum, start_angle, stop_angle)
         
         position_list = []

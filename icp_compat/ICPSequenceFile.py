@@ -1,4 +1,5 @@
 from StringIO import StringIO
+from __future__ import with_statement
 
 class PyICPSequence:
     """controls and reads from a sequence file, moving the marker around
@@ -122,11 +123,13 @@ class PyICPSequenceFile(PyICPSequence):
         PyICPSequence.__init__(self, marker)
         
     def LoadData(self):
-        data = open(self.filename, 'r').read()
+        with open(self.filename, 'r') as f:
+            data = f.read()
         return data 
     
     def WriteData(self, new_data):
-        open(self.filename, 'w').write(new_data)
+        with open(self.filename, 'w') as f:
+            f.write(new_data)
     
 class PyICPSequenceStringIO(PyICPSequence):
     def __init__(self, string_io_obj, marker = '%' ):

@@ -97,11 +97,10 @@ class ICPDataFile:
         return new_filename
     
     def getHeader(self, filename):
-        f_in = open(filename, 'r')
-        header = []
-        for i in range(13):
-            header.append(f_in.readline())
-        f_in.close()
+        with open(filename, 'r') as f_in:
+            header = []
+            for i in range(13):
+                header.append(f_in.readline())
         return header
         
     def ParseHeader(self, header=None, filename=None):
@@ -320,7 +319,8 @@ class ICPDataFile:
         if params['result']['psd_data'] is not None:
             psd_str = format_psddata(params['result']['psd_data']) + '\n'
         
-        open(scan_def['filename'], 'a').write(point_str + psd_str)    
+        with open(scan_def['filename'], 'a') as f:
+            f.write(point_str + psd_str)    
         
         
     def AddPointTimestamped(self, params, scan_def, timestamp=None, time_str=None):
@@ -335,7 +335,8 @@ class ICPDataFile:
         if params['result']['psd_data'] is not None:
             psd_str = format_psddata(params['result']['psd_data']) + '\n'
         
-        open(scan_def['filename'], 'a').write(point_str + psd_str)
+        with open(scan_def['filename'], 'a') as f:
+            f.write(point_str + psd_str)
             
 
 def format_point(params, scan_def):

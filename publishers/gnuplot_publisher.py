@@ -2,17 +2,20 @@ from publisher import Publisher
 from subprocess import Popen, PIPE
 from pyrecs.ordered_dict import OrderedDict
 import tempfile
+import os
 
 class GnuplotPublisher(Publisher):
     def __init__(self, auto_poisson_errorbars=True):
         self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        (tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        os.close(tmp_fd) # to be opened by name
         self.auto_poisson_errorbars = auto_poisson_errorbars
     
     def publish_start(self, state, scan_definition, **kwargs):
         """ called to record the start time of the measurement """
         self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        (tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        os.close(tmp_fd) # open by name
         
     def publish_datapoint(self, state, scan_def, **kwargs):
         outstr = ''
