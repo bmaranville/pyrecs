@@ -158,7 +158,7 @@ class Lakeshore340Humidity(TemperatureController):
         T_cal = calibration_function(T_raw)
         if print_vars == True: print "V_read, T_raw, T_cal:", V_read, T_raw, T_cal
         RH = ((V_read/V_PS) - 0.13471)/(0.00721 - 2.371089e-5*T_cal)
-        return {'RH': RH, 'V_read', V_read, 'T_raw': T_raw, 'T_cal': T_cal} 
+        return {'RH': RH, 'V_read': V_read, 'T_raw': T_raw, 'T_cal': T_cal} 
         
     def setRH(self, Rh_set, T_set):
         V_set = ((0.00721 - 2.371089e-5*T_set)*Rh_set + 0.13471)*V_PS
