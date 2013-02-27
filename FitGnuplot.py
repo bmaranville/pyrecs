@@ -6,7 +6,7 @@ import math
 import select
 from ordered_dict import OrderedDict
 
-
+DEBUG = True
 POISSON_ERROR = False
 
 class FitGnuplot:
@@ -48,6 +48,7 @@ class FitGnuplot:
         for pn in self.params_out['pname']:
             fit_str += '%s,' % pn
         fit_str = fit_str[:-1] + '\n'
+        if DEBUG: print fit_str
         self.gp.stdin.write(fit_str)
         #out_fd = select.select([self.gp.stdout, self.gp.stderr], [], [], 1.0)
         #if len(out_fd[0]) == 0:
@@ -59,9 +60,12 @@ class FitGnuplot:
         result = OrderedDict()
         for pn in self.params_out['pname']:
             self.gp.stdin.write('print %s \n' % pn)
-            result[pn] = float(self.gp.stdout.readline())
+            result_str = self.gp.stdout.readline()
+            if DEBUG: print result_str
+            result[pn] = float(result_str)
             self.gp.stdin.write('print %s_err \n' % pn)
-            result['%s_err' % pn] = float(self.gp.stdout.readline())
+            result_str = self.gp.stdout.readline()
+            result['%s_err' % pn] = float(result_str)
         self.params_out['fit_result'] = result
         self.fit_result = result
         return result
@@ -73,7 +77,8 @@ class FitGnuplot:
         
 
 class FitGaussGnuplot(FitGnuplot):
-    def __init__(self, xdata, ydata, params_in = {}):
+    def __init__(self, xdata, ydata, params_in = None):
+        if params_in is None: params_in = {}
         params_in['fit_func'] = 'y_offset + amplitude * exp( - ( x - center )**2 * 4 * log(2) / FWHM**2  )'
         params_in['pname'] = ['y_offset','amplitude','center','FWHM']
         FitGnuplot.__init__(self, xdata, ydata, params_in)
@@ -104,7 +109,8 @@ class FitGaussGnuplot(FitGnuplot):
         return p0
 
 class FitLineGnuplot(FitGnuplot):
-    def __init__(self, xdata, ydata, params_in = {}):
+    def __init__(self, xdata, ydata, params_in = None):
+        if params_in is None: params_in = {}
         params_in['fit_func'] = 'y_offset + (slope *  x)'
         params_in['pname'] = ['y_offset','slope']
         FitGnuplot.__init__(self, xdata, ydata, params_in)
@@ -116,7 +122,8 @@ class FitLineGnuplot(FitGnuplot):
         return p0
 
 class FitLineAlternate(FitGnuplot):
-    def __init__(self, xdata, ydata, params_in = {}):
+    def __init__(self, xdata, ydata, params_in = None):
+        if params_in is None: params_in = {}
         params_in['fit_func'] = 'slope * (x - x_offset)'
         params_in['pname'] = ['slope','x_offset']
         FitGnuplot.__init__(self, xdata, ydata, params_in)
@@ -136,7 +143,8 @@ class FitLineAlternate(FitGnuplot):
         return p0
         
 class FitCosSquaredGnuplot(FitGnuplot):
-    def __init__(self, xdata, ydata, params_in = {}):
+    def __init__(self, xdata, ydata, params_in = None):
+        if params_in is None: params_in = {}
         params_in['fit_func'] = 'y_offset - amplitude * (cos((x - center) * 2 * pi / period))**2'
         params_in['pname'] = ['y_offset', 'amplitude', 'center', 'period']
         FitGnuplot.__init__(self, xdata, ydata, params_in)
@@ -151,9 +159,28 @@ class FitCosSquaredGnuplot(FitGnuplot):
         p0['center'] = xdata[minpos]
         p0['period'] = 2.0 * ( max(xdata) - min(xdata) )
         return p0
+
+class FitCosGnuplot(FitGnuplot):
+    def __init__(self, xdata, ydata, params_in = None):
+        if params_in is None: params_in = {}
+        params_in['fit_func'] = 'y_offset + amplitude * (cos((x - center) * 2 * pi / period))'
+        params_in['pname'] = ['y_offset', 'amplitude', 'center', 'period']
+        FitGnuplot.__init__(self, xdata, ydata, params_in)
+        
+    def make_guesses(self):
+        xdata = self.xdata
+        ydata = self.ydata
+        p0 = {}
+        p0['y_offset'] = min(ydata)
+        p0['amplitude'] = max(ydata) - p0['y_offset']
+        minpos = ydata.index(max(ydata))
+        p0['center'] = xdata[minpos]
+        p0['period'] = ( max(xdata) - min(xdata) )
+        return p0
         
 class FitQuadraticGnuplot(FitGnuplot):
-    def __init__(self, xdata, ydata, params_in = {}):
+    def __init__(self, xdata, ydata, params_in = None):
+        if params_in is None: params_in = {}
         params_in['fit_func'] = 'y_offset + amplitude * (x - center)**2'
         params_in['pname'] = ['y_offset', 'amplitude', 'center']
         FitGnuplot.__init__(self, xdata, ydata, params_in)
