@@ -83,6 +83,8 @@ def update_mixins():
     InstrumentController.__bases__ = tuple(active_mixins)
     for mixin in active_mixins:
         mixin.__init__(ic)
+    icp_conversions = ic.GetICPConversions()
+    prefilter_ICP.icpt.register_icp_conversions(icp_conversions)
     
 def activate_mixin(mixin_name):
     if mixin_name in mixins:

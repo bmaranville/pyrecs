@@ -26,7 +26,7 @@ class PSDControlMixin:
         self.ymin = self.SetYmin
         self.ymax = self.SetYmax
         
-        self.setPSDActive(False) #start with pencil detector by default
+        self.setPSDActive(True) #start with psd when activated
         
     def getPSDActive(self):
         """ Returns true if the PSD is the active counter """
