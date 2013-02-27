@@ -1019,6 +1019,7 @@ class InstrumentController:
         speed_ratio reduces the vscale on the motor for the duration of the scan, then returns it to what it was before the scan.
         """ 
         (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        os.close(tmp_fd) # we'll open the file by name later
         title = 'ic.RapidScan(%d, %.4f, %.4f)' % (motornum, start_angle, stop_angle)
         
         # edges of bins: where we measure
@@ -1106,9 +1107,9 @@ class InstrumentController:
             
             #self.write(str(new_bin_position) + '\t'+ str(new_cps))
             out_str = '%.4f\t%.4f' % (new_bin_position, new_cps)
-            tmp_file = open(tmp_path, 'a')
-            tmp_file.write(out_str + '\n')
-            tmp_file.close()
+            with open(tmp_path, 'a') as tmp_file:
+                tmp_file.write(out_str + '\n')
+                
             self.updateGnuplot(tmp_path, title, error_bars=False) 
 
             if (direction * (stop_angle - new_soft_pos)) < tol:
@@ -1142,6 +1143,7 @@ class InstrumentController:
                 returns: (position, counts, elapsed_time) """
         
         (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        os.close(tmp_fd) # immediately close the open OS-level file handle.  We'll open the file by name later
         title = 'ic.RapidScan(%d, %.4f, %.4f)' % (motornum, start_angle, stop_angle)
         
         position_list = []
@@ -1204,9 +1206,9 @@ class InstrumentController:
             
             self.write(str(position_list[-1]) + '\t'+ str(cps_list[-1]))
             out_str = '%.4f\t%.4f' % (estimated_pos, new_cps)
-            tmp_file = open(tmp_path, 'a')
-            tmp_file.write(out_str + '\n')
-            tmp_file.close()
+            with open(tmp_path, 'a') as tmp_file:
+                tmp_file.write(out_str + '\n')
+                
             self.updateGnuplot(tmp_path, title)
             
             if abs(new_soft_pos - soft_pos) <= tol:
@@ -1449,12 +1451,14 @@ class InstrumentController:
     
     def RunScanFile(self, json_filename, this_publisher=None):
         """ opens and runs a scan from a definition in a json file """
-        scan_definition = simplejson.loads(open(json_filename,'r').read())
+        with open(json_filename, 'r') as json_file:
+            scan_definition = simplejson.loads(json_file.read())
         self.RunScan(scan_definition, this_publisher=this_publisher)
     
     def DryRunScanFile(self, json_filename):
         """ opens and runs a scan from a definition in a json file """
-        scan_definition = simplejson.loads(open(json_filename,'r').read())
+        with open(json_filename, 'r') as json_file:
+            scan_definition = simplejson.loads(json_file.read())
         return self.DryRunScan(scan_definition)
     
     def PeakScan(self, movable, numsteps, mstart, mstep, duration, mprevious, t_movable=None, t_scan=False, comment=None, Fitter=None, auto_drive_fit=False, gnuplot=True):
@@ -1587,7 +1591,7 @@ class InstrumentController:
         return self.last_fitted_peak
                   
     def updateGnuplot(self, filename, title, gaussfit_params = None, error_bars=True):
-        if not self.plot:
+        if self.plot is None:
             # we haven't plotted yet - create the gnuplot window
             self.plot = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
         else:

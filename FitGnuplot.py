@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from copy import deepcopy
 from subprocess import Popen, PIPE
 import tempfile, os
@@ -5,18 +6,19 @@ import math
 import select
 from ordered_dict import OrderedDict
 
+
 POISSON_ERROR = False
 
 class FitGnuplot:
     def __init__(self, xdata, ydata, params_in):
         """ at minimum, need params['fit_func'] and params['pname'] """
         self.gp = Popen("gnuplot", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)        
-        (self.tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for fitting, plotting
-        self.tmp_file = open(self.tmp_path, 'w')
-        for x, y in zip(xdata, ydata):
-            out_str  = '%.4f\t%.4f' % (x, y)
-            self.tmp_file.write(out_str + '\n')
-        self.tmp_file.close()
+        (tmp_fd, self.tmp_path) = tempfile.mkstemp() #temporary file for fitting, plotting
+        os.close(tmp_fd)
+        with open(self.tmp_path, 'w') as tmp_file:
+            for x, y in zip(xdata, ydata):
+                out_str  = '%.4f\t%.4f' % (x, y)
+                tmp_file.write(out_str + '\n')
         self.xdata = xdata
         self.ydata = ydata
         #self.fit_func = params_in['fit_func']
@@ -68,6 +70,7 @@ class FitGnuplot:
         if not self.params_out.has_key('result'):
             return
         self.gp.stdin.write("plot \'%s\' u 1:2:(1+sqrt($2)) w errorbars, f(x) w l \n" % (self.tmp_path,) )
+        
 
 class FitGaussGnuplot(FitGnuplot):
     def __init__(self, xdata, ydata, params_in = {}):

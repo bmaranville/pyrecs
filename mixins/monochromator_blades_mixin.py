@@ -1,5 +1,6 @@
 from pyrecs.drivers.EZ_motor import EZStepper
 import collections
+import os
 #import functools
 #from mixin import MixIn
 MONO_BLADE_LINE = 2
@@ -127,6 +128,7 @@ class MonoBladeMixin:
                 returns: (position, counts, elapsed_time) """
         
         (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
+        os.close(tmp_fd) # we'll open by name later
         title = 'ic.RapidScanMonoBlade(%d, %.4f, %.4f)' % (bladenum, start_angle, stop_angle)
         
         position_list = []
