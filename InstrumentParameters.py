@@ -2,17 +2,18 @@ import struct, time
 from ordered_dict import OrderedDict
 import os
 #home_dir = os.environ['HOME']
-home_dir = '/usr/local'
- 
+home_dir = '/usr/local/icp/cfg/'
+#home_dir = os.path.join(os.path.dirname(__file__), 'icp_compat', 'MAGIK_cfg')
+
 DEFAULT_VME_PORT = '/dev/ttyUSB0'
 DEBUG = False
 MAXMOTOR = 24
 MAXMOTS = 40 # for PBR and MAGIK - 30 for other instruments
-MOTPOS_BUF = os.path.join(home_dir, 'icp/cfg/MOTPOS.BUF')
-MOTORS_BUF = os.path.join(home_dir, 'icp/cfg/MOTORS.BUF')
-INSTR_CFG = os.path.join(home_dir, 'icp/cfg/INSTR.CFG')
+MOTPOS_BUF = os.path.join(home_dir, 'MOTPOS.BUF')
+MOTORS_BUF = os.path.join(home_dir, 'MOTORS.BUF')
+INSTR_CFG = os.path.join(home_dir, 'INSTR.CFG')
 DEBUG = False
-RS232_CFG = os.path.join(home_dir, 'icp/cfg/rs232.conf')
+RS232_CFG = os.path.join(home_dir, 'rs232.conf')
 FIELD_LENGTH = 64 # new PBR and MAGIK - this is 40 for BT4 etc.
 
 class InstrumentParameters:
