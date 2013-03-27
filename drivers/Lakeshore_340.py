@@ -17,7 +17,7 @@ class Lakeshore340(TemperatureController):
             'control_loop': 1,
             'serial_port': '/dev/ttyUSB6'
             }
-        self.sensors = {'A': "Sensor A", 'B':"Sensor B"}
+        self.sensors = {'A': "Sensor A", 'B':"Sensor B", 'C': "Sensor C"}
         valid_record = self.sensors.copy()
         valid_record.update({'setpoint':"Setpoint", 'all':"Record all"})
         self.valid_settings = {
