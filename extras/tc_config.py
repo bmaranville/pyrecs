@@ -31,8 +31,10 @@ class MyDialog(wx.Dialog):
         for key in self.keys:
             self.key_labels[key] = wx.StaticText(self, -1, key)
             valid_settings = self.device.valid_settings[key]
+            choices=valid_settings.values()
+            choices.sort()
             self.reverse_lookup[key] = dict([(v,k) for k,v in valid_settings.iteritems()])
-            self.value_chooser[key] = wx.Choice(self, -1, choices=valid_settings.values())
+            self.value_chooser[key] = wx.Choice(self, -1, choices=choices)
         self.cancel_btn = wx.Button(self, -1, "Cancel")
         self.apply_btn = wx.Button(self, -1, "Ok")
 

@@ -14,7 +14,7 @@ DET_SIZE = DET_DIMX * DET_DIMY;
 # that preceed the returned data block.
 
 # This could probably be raised to 65536/bytes_per_int = 16384
-XFER_BLOCK_SIZE = 1024;
+XFER_BLOCK_SIZE = 2048;
 MAXBUF = 2**16
 
 """ All of the following constants were lifted straight from the DALI driver """
@@ -45,14 +45,14 @@ ERR_INVAL   = 6 #/* Bad value for parameter */
 ERR_BOUNDS  = 7 #/* Boundary error */
 
 ERR_CODES = {
-    0: "Undefined error"
-    1: "Access error"
-    2: "Bad opcode"
-    3: "Bad parameter"
-    4: "Run state not appropriate for action"
-    5: "Wrong number of arguments"
-    6: "Bad value for parameter"
-    7: "Boundary error"
+    0: "Undefined error",
+    1: "Access error",
+    2: "Bad opcode",
+    3: "Bad parameter",
+    4: "Run state not appropriate for action",
+    5: "Wrong number of arguments",
+    6: "Bad value for parameter",
+    7: "Boundary error",
 }
 
 
@@ -81,7 +81,7 @@ CMD_GET = 6;
 
 """ System status word """
 PAR_STATUS = 0;
-""" Rank o fPosition Histogram """
+""" Rank of Position Histogram """
 PAR_RANK = 1;
 """ Dimensions of Position Histogram """
 PAR_DIMENSIONS = 2;
