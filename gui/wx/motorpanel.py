@@ -670,4 +670,49 @@ class AbortPanel(wx.Panel):
      
     def Abort(self, event=None):
         pass # override in the subclass you actually use
+        
+class AbortPauseFinishPanel(wx.Panel):
+    def __init__(self, parent, id = -1):
+        wx.Panel.__init__(self, parent, id)        
+        self.buttons = [] 
+        # don't put the abort button in the buttons list!  
+        # this list is used for auto-disable of buttons when running
+        self.abort_button = wx.Button(self, -1, 'Abort\nall\nmoves')
+        self.pause_button = wx.Button(self, -1, 'Pause/\nunpause')
+        self.finish_button = wx.Button(self, -1, 'Finishup')
+        self.Bind(wx.EVT_BUTTON, self.Abort, self.abort_button)
+        self.Bind(wx.EVT_BUTTON, self.Pause, self.pause_button)
+        self.Bind(wx.EVT_BUTTON, self.Finish, self.finish_button)
+        self.__set_properties()
+        self.__do_layout()
+        
+    def __set_properties(self):
+        # begin wxGlade: MyFrame.__set_properties
+        self.abort_button.SetBackgroundColour(wx.Colour(255, 0, 0))
+        self.abort_button.SetForegroundColour(wx.Colour(255, 255, 255))
+        self.abort_button.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
+#        self.pause_button.SetBackgroundColour(wx.Colour(255, 0, 0))
+#        self.pause_button.SetForegroundColour(wx.Colour(255, 255, 255))
+#        self.pause_button.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
+#        self.finish_button.SetBackgroundColour(wx.Colour(255, 0, 0))
+#        self.finish_button.SetForegroundColour(wx.Colour(255, 255, 255))
+#        self.finish_button.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
+        # self.SetTitle("frame_1")
+        # end wxGlade
+    
+    def __do_layout(self):
+        # begin wxGlade: MyFrame.__do_layout
+        sizer_1 = wx.GridSizer(1,1,0,0)
+        sizer_1.Add(self.abort_button, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL, 10)
+        self.SetSizer(sizer_1)
+     
+    def Abort(self, event=None):
+        pass # override in the subclass you actually use
+        
+    def Pause(self, event=None):
+        pass # override in the subclass you actually use
+        
+    def Finish(self, event=None):
+        pass # override in the subclass you actually use
+
 
