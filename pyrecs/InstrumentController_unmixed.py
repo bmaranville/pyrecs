@@ -961,8 +961,12 @@ class InstrumentController:
             # silently continues if still outside tolerance after motor_retries!
             
         # can check for problems here:  if the lists aren't empty, they didn't meet tolerances:
-        # if len(motors_to_move) > 0 : print "error!"
-        # if len(motors_to_backlas) > 0 : print "error!"
+        unfinished_motors = motors_to_move + motors_to_backlash
+        unreached_targets = positions1 + positions2
+        if len(unfinished_motors) > 0 : 
+            self.write('error! these motors did not reach target position:\n')
+            for m,p in zip(unfinished_motors, unreached_targets):
+                self.write('motor %d target: %.4f\n reached: %.4f\n' % (m, p, current_pos[m]))
             
         return
         
