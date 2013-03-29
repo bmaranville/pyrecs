@@ -1,5 +1,5 @@
-from StringIO import StringIO
 from __future__ import with_statement
+from StringIO import StringIO
 
 class PyICPSequence:
     """controls and reads from a sequence file, moving the marker around

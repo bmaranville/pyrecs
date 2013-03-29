@@ -34,7 +34,7 @@ class MyFrame(wx.Frame):
         self.buttons = []
         self.panels = OrderedDict()
         
-        self.abort_panel = XMLRPCAbortPanel(self, -1)
+        self.abort_panel = XMLRPCSignalPanel(self, -1)
             
         # (this specifically excludes the Abort button, which is NOT disabled)
         #self.plot_panel = PlotPanel(self, -1)      

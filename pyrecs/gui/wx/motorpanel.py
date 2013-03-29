@@ -691,10 +691,10 @@ class AbortPauseFinishPanel(wx.Panel):
         self.abort_button.SetBackgroundColour(wx.Colour(255, 0, 0))
         self.abort_button.SetForegroundColour(wx.Colour(255, 255, 255))
         self.abort_button.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
-#        self.pause_button.SetBackgroundColour(wx.Colour(255, 0, 0))
+        self.pause_button.SetBackgroundColour(wx.Colour(255, 180, 0))
 #        self.pause_button.SetForegroundColour(wx.Colour(255, 255, 255))
 #        self.pause_button.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
-#        self.finish_button.SetBackgroundColour(wx.Colour(255, 0, 0))
+        self.finish_button.SetBackgroundColour(wx.Colour(255, 180, 0))
 #        self.finish_button.SetForegroundColour(wx.Colour(255, 255, 255))
 #        self.finish_button.SetFont(wx.Font(11, wx.DEFAULT, wx.NORMAL, wx.BOLD, 0, ""))
         # self.SetTitle("frame_1")
@@ -702,8 +702,10 @@ class AbortPauseFinishPanel(wx.Panel):
     
     def __do_layout(self):
         # begin wxGlade: MyFrame.__do_layout
-        sizer_1 = wx.GridSizer(1,1,0,0)
-        sizer_1.Add(self.abort_button, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL, 10)
+        sizer_1 = wx.GridSizer(1,3,0,0)
+        sizer_1.Add(self.abort_button, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_1.Add(self.pause_button, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 10)
+        sizer_1.Add(self.finish_button, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 10)
         self.SetSizer(sizer_1)
      
     def Abort(self, event=None):
