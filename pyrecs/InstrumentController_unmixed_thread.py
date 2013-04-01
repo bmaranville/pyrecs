@@ -690,6 +690,7 @@ class InstrumentController:
             'scaler_monitor_preset': self.state.get('scaler_monitor_preset', 1000) }
         return counter_state
     
+    @inthread
     def updateState(self, target_state):
         new_state = target_state.copy()
         devices_moved = set()
@@ -711,6 +712,7 @@ class InstrumentController:
         Enable/Disable logging """
         self.logwriter.logging_enabled = enable
                 
+    @inthread
     def PrintCounts(self, duration):
         """ console command accessed via equivalent ICP command 'ct':
         get counts for a given duration using the active counter """
@@ -718,12 +720,14 @@ class InstrumentController:
         msg = 'count time: %.4f monitor: %g counts: %g' % (result['count_time'], result['monitor'], result['counts'])
         self.write(msg, file_msg = ('Count: '+ msg))
         
+    @inthread
     def PrintMonitor(self, duration=-5):
         """ console command accessed via equivalent ICP command 'mon':
         get monitor counts for a given duration (defaults to 5s) using the active counter """
         result = self.Count(duration)
         self.write('count time: %.4f  counts: %d' % (result['count_time'], result['monitor']))
         
+    @inthread
     def PencilCount(self, duration, reraise_exceptions = False):
         """ PencilCount(self, duration, reraise_exceptions = False):
         Count with the pencil detector.  All interaction is through self.scaler object """
