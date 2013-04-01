@@ -267,8 +267,8 @@ class InstrumentController:
         #signal.signal(signal.SIGTSTP, self.Suspend)
         #signal.signal(signal.SIGINT, self.Abort)
         #signal.signal(signal.SIGQUIT, self.Break)
-        #self._inthread_running = False
-        #self.threading_enabled = True
+        self._inthread_running = False
+        self.threading_enabled = True
 
         self.sequence = StringIO() # empty sequence to start
         
