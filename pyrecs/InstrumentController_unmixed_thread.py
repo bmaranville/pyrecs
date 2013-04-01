@@ -264,9 +264,11 @@ class InstrumentController:
         #self.fileManifest = FileManifest()
         
         #setup of signal handlers: taking over ctrl-c, ctrl-z and ctrl-\
-        #signal.signal(signal.SIGTSTP, self.Suspend)
-        #signal.signal(signal.SIGINT, self.Abort)
-        #signal.signal(signal.SIGQUIT, self.Break)
+        signal.signal(signal.SIGTSTP, self.Suspend)
+        signal.signal(signal.SIGINT, self.Abort)
+        signal.signal(signal.SIGQUIT, self.Break)
+        self._inthread_running = False
+        self.threading_enabled = True
 
         self.sequence = StringIO() # empty sequence to start
         
@@ -355,17 +357,16 @@ class InstrumentController:
         def new_func(self, *args, **kw):
             if DEBUG: print threading.currentThread()
             # this is a bit of a cheat, but the first arg is always "self", so use it:
-            self = args[0]
             if not self.threading_enabled: # bail out!
-                return func(*args, **kw)
+                return func(self, *args, **kw)
             if self._inthread_running == True: # we're already in a protected thread
-                return func(*args, **kw) # execute function unchanged
+                return func(self, *args, **kw) # execute function unchanged
             else: # start a new thread and set all the flags
                 self._inthread_running = True
                 self._aborted = False
                 self._suspended = False
                 self._break = False
-                thr = InThread(func, *args, **kw)
+                thr = InThread(func, self, *args, **kw)
                 thr.start()
                 while not thr.isFinished():
                     time.sleep(0.001) # fast loop?
