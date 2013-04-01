@@ -366,12 +366,25 @@ class InstrumentController:
                 self._aborted = False
                 self._suspended = False
                 self._break = False
+                # store old handlers
+                orig_handlers = {}
+                for sig in [signal.SIGINT, signal.SIGQUIT, signal.SIGSTP]:
+                    orig_handlers[sig] = signal.getsignal(sig)
+                # register new handlers                
+                signal.signal(signal.SIGTSTP, self.Suspend)
+                signal.signal(signal.SIGINT, self.Abort)
+                signal.signal(signal.SIGQUIT, self.Break)
+                
                 thr = InThread(func, self, *args, **kw)
                 thr.start()
                 while not thr.isFinished():
                     time.sleep(0.001) # fast loop?
                     
-                # Now we're done with the thread: reset a bunch of flags
+                # done with thread
+                # restore handlers
+                for sig in [signal.SIGINT, signal.SIGQUIT, signal.SIGSTP]:
+                    signal.signal(sig, orig_handlers[sig])
+                # reset flags
                 self._inthread_running = False
                 self._aborted = False
                 self._suspended = False
