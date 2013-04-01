@@ -368,7 +368,7 @@ class InstrumentController:
                 self._break = False
                 # store old handlers
                 orig_handlers = {}
-                for sig in [signal.SIGINT, signal.SIGQUIT, signal.SIGSTP]:
+                for sig in [signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP]:
                     orig_handlers[sig] = signal.getsignal(sig)
                 # register new handlers                
                 signal.signal(signal.SIGTSTP, self.Suspend)
@@ -382,7 +382,7 @@ class InstrumentController:
                     
                 # done with thread
                 # restore handlers
-                for sig in [signal.SIGINT, signal.SIGQUIT, signal.SIGSTP]:
+                for sig in [signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP]:
                     signal.signal(sig, orig_handlers[sig])
                 # reset flags
                 self._inthread_running = False
