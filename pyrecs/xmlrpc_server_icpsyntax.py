@@ -11,6 +11,7 @@ from InstrumentController_unmixed import InstrumentController
 import pyrecs.mixins
 
 AVAILABLE_MIXINS = pyrecs.mixins.__all__
+DEFAULT_MIXINS = ['ProtectedThreadMixin']
 
 #import xmlrpclib
 
@@ -77,7 +78,7 @@ for mixin_module in AVAILABLE_MIXINS:
     mixin_name = mixin_class.__name__
     mixins[mixin_name] = mixin_class
 
-active_mixins = set()
+active_mixins = set([mixins[mixin_name] for mixin_name in DEFAULT_MIXINS])
 
 def update_mixins():
     InstrumentController.__bases__ = tuple(active_mixins)
@@ -99,6 +100,9 @@ def deactivate_mixin(mixin_name):
         update_mixins()
     except KeyError:
         return "not an active mixin"
+
+#register the default mixins
+update_mixins()
 
 #signalserver = SimpleXMLRPCServer((socket.getfqdn(), 8000),
 #                        requestHandler=RequestHandler)

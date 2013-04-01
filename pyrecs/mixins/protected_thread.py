@@ -1,6 +1,9 @@
 import threading
 import functools
+import signal
+import time
 
+DEBUG = False
 TO_PROTECT = [
     "updateState",
     "PrintCounts",
@@ -133,9 +136,11 @@ class ProtectedThreadMixin:
     def __init__(self):
         self._inthread_running = False
         self.threading_enabled = True
+        # now, wrap all the functions that need to be protected.
         for funcname in TO_PROTECT:
-            func = getattr(self, funcname)
-            func = inthread(func)      
+            func = getattr(self.__class__, funcname)
+            new_func = inthread(func)
+            setattr(self.__class__, funcname, new_func)   
              
 # for compatibility and easy mixing:
 mixin_class = ProtectedThreadMixin
