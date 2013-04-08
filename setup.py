@@ -16,5 +16,6 @@ setup(name='PyReCS',
         'pyrecs.extras',
         'pyrecs.mixins',
         'pyrecs.icp_compat',
-        'pyrecs.publishers'],
+        'pyrecs.publishers',
+        'pyrecs.lib'],
      )

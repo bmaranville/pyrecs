@@ -6,6 +6,8 @@ print dirname
 site.addsitedir(dirname) 
 
 from pyrecs.gui.wx.motorpanel import AbortPauseFinishPanel
+# this is to implement key grabbing on function keys:
+from pyrecs.lib import pyxhook 
 import wx
 import xmlrpclib
 import threading
@@ -13,6 +15,11 @@ import socket
 from pyrecs.ordered_dict import OrderedDict
 
 HOSTNAME = socket.getfqdn()
+HOTKEYS = {
+    "F9": 'Abort',
+    "F10": 'Suspend',
+    "F11": 'Finish'
+}
 
 class XMLRPCSignalPanel(AbortPauseFinishPanel):
     icsig = xmlrpclib.ServerProxy('http://'+HOSTNAME+':8000')
@@ -41,6 +48,12 @@ class MyFrame(wx.Frame):
         self.__set_properties()
         self.__do_layout()
         # end wxGlade
+        hm = pyxhook.HookManager()
+        hm.HookKeyboard()
+        hm.KeyDown = self.handleKey
+        hm.start()
+
+        self.keylistener = hm
         self.Bind(wx.EVT_CLOSE, self.onClose)
 
     def __set_properties(self):
@@ -72,9 +85,18 @@ class MyFrame(wx.Frame):
 
     def onClose(self, event):
         """ cleanup any threads that might have been opened """
+        self.keylistener.cancel()
         #print "closing self"
         event.Skip()
         
+    def handleKey(self, event):
+        if event.Key in HOTKEYS.keys():
+            #print "processing %s" % (event.Key)
+            try:
+                getattr(self.abort_panel, HOTKEYS[event.Key])()
+            except:
+                print "communication with server failed"
+            
     def disable_all_buttons(self):
         """ disables all buttons except the abort button """
         old_button_state = []

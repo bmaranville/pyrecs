@@ -9,8 +9,8 @@ import threading
 import sys, os
 import time
 
-PYRECS_SERVER_ADDR = 'http://' + socket.getfqdn()
-#PYRECS_SERVER_ADDR = "http://andr.ncnr.nist.gov"
+#PYRECS_SERVER_ADDR = 'http://' + socket.getfqdn()
+PYRECS_SERVER_ADDR = "http://magik.ncnr.nist.gov"
 PYRECS_SIGNAL_PORT = 8000
 PYRECS_CONTROL_PORT = 8001
 
