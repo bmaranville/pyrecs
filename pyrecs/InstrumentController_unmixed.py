@@ -1504,11 +1504,12 @@ class InstrumentController:
         
         
         fitter = Fitter(xdata, ydata)
-        fitter.do_fit()
+        
         #print fitter.error
         #self.fitter_error = fitter.error
         self.fitter = fitter
-        try:       
+        try:
+            fitter.do_fit()
             fit_params = fitter.params_out
             fit_result = fit_params.get('fit_result', {})
             fit_str = ''
