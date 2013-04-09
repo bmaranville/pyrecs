@@ -2,9 +2,9 @@
 
 import site, os
 import signal
-dirname = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-print dirname
-site.addsitedir(dirname) 
+#dirname = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+#print dirname
+#site.addsitedir(dirname) 
 
 from pyrecs.gui.wx.motorpanel import AbortPauseFinishPanel
 # this is to implement key grabbing on function keys:
@@ -41,15 +41,24 @@ class XMLRPC_plus_ICP_SignalPanel(AbortPauseFinishPanel):
             os.kill(icpProcID, sig)
     
     def Abort(self, event=None):
-        self.icsig.Abort()
+        try: 
+            self.icsig.Abort()
+        except:
+            pass
         self.sendICPSignal(signal.SIGINT)
     
     def Pause(self, event=None):
-        self.icsig.Suspend()
+        try: 
+            self.icsig.Suspend()
+        except: # connection refused?
+            pass 
         self.sendICPSignal(signal.SIGTSTP)
         
     def Finish(self, event=None):
-        self.icsig.Break()
+        try:
+            self.icsig.Break()
+        except:
+            pass
         self.sendICPSignal(signal.SIGQUIT)
         
 
@@ -78,7 +87,7 @@ class MyFrame(wx.Frame):
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
-        self.SetTitle("Abort Control")
+        self.SetTitle("ICP/Pyrecs Abort Control")
         # end wxGlade        
     
     def __do_layout(self):
