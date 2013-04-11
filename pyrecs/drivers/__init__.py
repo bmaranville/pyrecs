@@ -7,6 +7,6 @@ temperature_controllers = [
     ['CMU Lakeshore 340 (Humidity)', 'CMU_humidity_rig', 'Lakeshore340Humidity'] ]
     
 magnet_controllers = [
-    ['Sorensen DCS 60', 'SorensenDCS60', 'Sorensen'],
+    ['Sorensen DCS 60', 'SorensenDCS60', 'SorensenNew'],
     ['Hewlett-Packard 6632B', 'hp_6632b', 'HP6632B'],
     ['Lakeshore 421 Gaussmeter', 'Lakeshore_421', 'Lakeshore421'] ]
