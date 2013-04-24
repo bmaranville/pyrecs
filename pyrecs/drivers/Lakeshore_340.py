@@ -3,7 +3,9 @@ from temperature_controller import TemperatureController
 
 class Lakeshore340(TemperatureController):
     """ driver for serial connection to Lakeshore 340 Temperature Controller """
-    label = 'Lakeshore 331/340'
+    label = 'Lakeshore 331'
+    sensors = {'A': "Sensor A", 'B':"Sensor B", 'C': "Sensor C"}
+    
     def __init__(self, port = '/dev/ttyUSB6'):
         TemperatureController.__init__(self, port)
         """ the Temperature serial connection is on the third port at MAGIK, which is /dev/ttyUSB2 """
@@ -17,7 +19,6 @@ class Lakeshore340(TemperatureController):
             'control_loop': 1,
             'serial_port': '/dev/ttyUSB6'
             }
-        self.sensors = {'A': "Sensor A", 'B':"Sensor B", 'C': "Sensor C"}
         valid_record = self.sensors.copy()
         valid_record.update({'setpoint':"Setpoint", 'all':"Record all"})
         self.valid_settings = {
@@ -106,6 +107,12 @@ class Lakeshore340(TemperatureController):
         return self.getTemp(sensor = self.settings['control_sensor'])
 
 
+class Lakeshore331(Lakeshore340):
+    label = 'Lakeshore 331'
+    sensors = {'A': "Sensor A", 'B':"Sensor B"}    
+    def initSerial(self):
+        self.serial = serial.Serial(self.port, 9600, bytesize=7, parity='O', rtscts=False, xonxoff=False, timeout=1)
+        #self.setControlLoop()
         
 class CommunicationsError(Exception):
     """ To be thrown when serial communications fail """
