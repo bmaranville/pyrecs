@@ -544,7 +544,7 @@ class InstrumentController:
             mc.setField(field)
             
     def GetMagnetByName(self, mc_name, poll=False):
-        mcnum = int(mc_name[1:])
+        mcnum = int(mc_name[1:])-1
         if poll==True:
             field = self._magnet[mcnum].getField()
             self.state[mc_name] = field
@@ -1504,11 +1504,12 @@ class InstrumentController:
         
         
         fitter = Fitter(xdata, ydata)
-        fitter.do_fit()
+        
         #print fitter.error
         #self.fitter_error = fitter.error
         self.fitter = fitter
-        try:       
+        try:
+            fitter.do_fit()
             fit_params = fitter.params_out
             fit_result = fit_params.get('fit_result', {})
             fit_str = ''
@@ -1685,14 +1686,14 @@ class InstrumentController:
                 init_state.append((motname, '%f' % motstart))
                 
         if ibuf.data['IncT'] > FLOAT_ERROR:
-            scan_expr.append(('t0', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
+            scan_expr.append(('t1', '%f + (i * %f)' % (ibuf.data['T0'], ibuf.data['IncT'])))
         elif state.get('temp_controllers_defined', 0) > 0: 
-            init_state.append(('t0', ibuf.data['T0']))
+            init_state.append(('t1', ibuf.data['T0']))
             
         if ibuf.data['Hinc'] > FLOAT_ERROR:
-            scan_expr.append(('h0', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
+            scan_expr.append(('h1', '%f + (i * %f)' % (ibuf.data['H0'], ibuf.data['Hinc'])))
         elif state.get('magnets_defined', 0) > 0:
-            init_state.append(('h0', ibuf.data['H0']))
+            init_state.append(('h1', ibuf.data['H0']))
             
         scan_definition = {'namestr': self.ip.GetNameStr(), 
                            'comment': ibuf.data['description'],

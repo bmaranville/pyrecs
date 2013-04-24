@@ -34,7 +34,7 @@ class NESLAB_BATH(TemperatureController):
             }
         self.sensors = {'I': "Internal", 'X':"External"}
         valid_record = self.sensors.copy()
-        valid_record.update({'setpoint':"Setpoint", 'all':"Record all"})
+        valid_record.update({'Setpoint':"Setpoint", 'all':"Record all"})
         self.valid_settings = {
             'sample_sensor': self.sensors,
             'control_sensor': self.sensors,
@@ -97,14 +97,30 @@ class NESLAB_BATH(TemperatureController):
         else:
             return reply
     
-    def getState(self, poll=True):
+    def getFullState(self, poll=True):
         state = {}
         for sensor in self.sensors:
             sensor_name = self.sensors[sensor]
-            sensor_value = self.getTemp(sensor)
+            sensor_value = self.getTempByName(sensor)
             state[sensor_name] = sensor_value
         state['Setpoint'] = self.getSetpoint() 
         return state
+    
+    def getState(self, poll=True):
+        fullstate = self.getFullState()
+        record = self.settings['record']
+        if record == 'all':
+            return fullstate
+        else:
+            sensor_name = self.valid_settings['record'][record]
+            return fullstate[sensor_name]
+    
+    def getTempByName(self, name):
+        temp = {
+            'I': self.getTemp,
+            'X': self.getAuxTemp
+        }[name]()
+        return temp
     
     def getTemp(self):
         cmd_string = '\x00\x01\x20\x00'

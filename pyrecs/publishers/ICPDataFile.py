@@ -193,10 +193,11 @@ class ICPDataFile:
              
     def GenerateHeader(self, state = None, scan_def = None):
         params = deepcopy(state)
-        params.update(dict(scan_def['init_state']))
+        start_params = deepcopy(state)
+        start_params.update(dict(scan_def['init_state']))
         scan_expr = OrderedDict(scan_def['vary'])
         scan_state0 = {'i': 0}
-        context = deepcopy(params)
+        context = deepcopy(start_params)
         context.update(math.__dict__) # load up the standard context
         
         for d in scan_expr:
@@ -208,7 +209,7 @@ class ICPDataFile:
         for d in scan_expr:
             diff[d] = scan_state1[d] - scan_state0[d]
             
-        params.update(scan_state0) # get the start positions of moving objects...
+        start_params.update(scan_state0) # get the start positions of moving objects...
         #ibuf_data = scan_def['ibuf_data']
         description = scan_def['comment']
         description = '%-50s' % description[:50]  # chop it off at 50, but also pad the right to 50 if too short
@@ -217,31 +218,31 @@ class ICPDataFile:
         tstring = "'I'   " # this is an i-buffer, after all
         ttype  = 'RAW' # dunno why
         numpoints = scan_def['iterations']
-        count_type = params.get('scaler_gating_mode', 'TIME') #default to time, if not specified
+        count_type = start_params.get('scaler_gating_mode', 'TIME') #default to time, if not specified
         if count_type == 'TIME':
-            monitor = params.get('scaler_time_preset', 1.0)
+            monitor = start_params.get('scaler_time_preset', 1.0)
         elif count_type == 'NEUT':
-            monitor = params.get('scaler_monitor_preset', 1)
+            monitor = start_params.get('scaler_monitor_preset', 1)
         else:
             monitor = 1
-        prefactor = params.get('scaler_prefactor', 1)
-        tstart = float(params.get('t0', 0.0))
-        tincr = float(diff.get('t0', 0.0))
-        hfield = float(params.get('h0', 0.0))
-        num_detectors = int(params['num_detectors'])
+        prefactor = start_params.get('scaler_prefactor', 1)
+        tstart = float(start_params.get('t1', 0.0))
+        tincr = float(diff.get('t1', 0.0))
+        hfield = float(start_params.get('h1', 0.0))
+        num_detectors = int(start_params['num_detectors'])
         polarized_beam = scan_def.get('polarization_enabled', False)
         timestr =  time.strftime('%b %d %Y %H:%M')
         #timestr = params['timestr']
-        collim = params['collimation']
-        mosaic = params['mosaic']
-        wavelength = params['wavelength']
+        collim = start_params['collimation']
+        mosaic = start_params['mosaic']
+        wavelength = start_params['wavelength']
         
         header = "'%12s' '%17s' %6s%8.f.%5i  '%4s'%5i  '%3s'\n" % (filename, timestr, tstring, monitor, prefactor, count_type, numpoints, ttype)
         header += '  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    \n'
         header += '%50s ' % (description,)
         flipper_state_string = {True: 'ON ', False: 'OFF'}
         if polarized_beam: 
-            header += 'F1: %3s  F2: %3s  \n' % (flipper_state_string[params['flipper1']], flipper_state_string[params['flipper2']])
+            header += 'F1: %3s  F2: %3s  \n' % (flipper_state_string[start_params['flipper1']], flipper_state_string[start_params['flipper2']])
         else: 
             header += '\n'
         header += '%4i %4i %4i %4i %3i %3i %3i ' % (collim[0], collim[1], collim[2], collim[3], mosaic[0], mosaic[1], mosaic[2])
@@ -259,7 +260,7 @@ class ICPDataFile:
         motnames = []
         for motnum in range(1,7):
             motname = 'a%d' % motnum
-            start = float(params.get(motname, 0.0))
+            start = float(start_params.get(motname, 0.0))
             step = float(diff.get(motname, 0.0))
             stop = start + ((numpoints - 1) * step)
             header += '%3d   %11.5f%11.5f%11.5f\n' % (motnum, start, step, stop)
@@ -269,15 +270,12 @@ class ICPDataFile:
         data_keys = []
         motors_to_move = [m for m in motnames if m in scan_expr.keys()]
         for movable in OrderedDict(scan_def['vary']):
-            data_keys.append('     %s   ' % movable.upper()) 
+            if not movable.lower().startswith('t') and not movable.lower().startswith('h'):
+                # leave off temp and h-devices for now
+                data_keys.append('     %s   ' % movable.upper()) 
         #for motname in motors_to_move:
         #    data_keys.append('     %s   ' % motname.upper()) 
-        for i in range(params['temp_controllers_defined']): 
-            data_keys.append(' TEMP%d ' % i)
-            # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
-        for i in range(params['magnets_defined']):
-            data_keys.append(' H-Field%d ' % i)
-            # this mimics the ICP behaviour in which the H-field is only looked at if a magnet device is defined
+        
         data_keys.append('  MIN  ')
         if not count_type == 'NEUT': 
             data_keys.append('    MONITOR ')
@@ -285,6 +283,23 @@ class ICPDataFile:
         if num_detectors > 1: 
             data_keys.append('     EXTRA  ')
         
+        for i in range(params['temp_controllers_defined']):
+            tc = params['t%d' % (i+1)]
+            print tc
+            if hasattr(tc, 'keys'):
+                for key in tc.keys():
+                    data_keys.append(' TEMP%d_%s ' % (i+1, key))
+            else: # just a number
+                data_keys.append(' TEMP%d ' % (i+1))
+            # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
+        for i in range(params['magnets_defined']):
+            hc = params['h%d' % (i+1)]
+            if hasattr(hc, 'keys'):
+                for key in hc.keys():
+                    data_keys.append(' H-Field%d_%s ' % (i+1, key))
+            else: # just a number
+                data_keys.append(' H-Field%d ' % (i+1))
+            # this mimics the ICP behaviour in which the H-field is only looked at if a magnet device is defined
         # now generate the data header from the keys
         for key in data_keys:
             header += key
@@ -343,15 +358,17 @@ def format_point(params, scan_def):
     result = params['result']
     outstr = ''
     for movable in OrderedDict(scan_def['vary']):
-        outstr += '%11.5f ' % params[movable]
+        if not movable.lower().startswith('t') and not movable.lower().startswith('h'):
+            # leave off temp and h-devices for now
+            outstr += '%11.5f ' % params[movable]
         
-    for i in range(params['temp_controllers_defined']):
-        Tnow = params.get('t%d' % i, -999.)
-        outstr += '%11g ' % Tnow
+    #for i in range(params['temp_controllers_defined']):
+    #    Tnow = params.get('t%d' % i, -999.)
+    #    outstr += '%11g ' % Tnow
         # this mimics the ICP behaviour in which the temperature is only looked at if a T device is defined
-    for i in range(params['magnets_defined']):
-        Hnow = params.get('h%d' % i, -999.)
-        outstr += '%11g ' % Hnow            
+    #for i in range(params['magnets_defined']):
+    #    Hnow = params.get('h%d' % i, -999.)
+    #    outstr += '%11g ' % Hnow            
     t_seconds = result['count_time'] / 10000.0
     t_minutes = t_seconds / 60.0
     #t_minutes = int(t_seconds / 60)
@@ -361,10 +378,21 @@ def format_point(params, scan_def):
     outstr += time_str
     if params['scaler_gating_mode'] == 'TIME':
         outstr += '%11g ' % result['monitor']
-    outstr += '%11g ' % result['counts']    
-    #Tnow = params.get('t0', None)
-    #if Tnow is not None:
-    #    outstr += '%11g ' % Tnow
+    outstr += '%11g ' % result['counts']
+    for i in range(params['temp_controllers_defined']):
+        tc = params['t%d' % (i+1)]
+        if hasattr(tc, 'keys'):
+            for key in tc.keys():
+                outstr += '%11g ' % (tc[key])
+        else: # just a number
+            outstr += '%11g ' % tc
+    for i in range(params['magnets_defined']):
+            hc = params['h%d' % (i+1)]
+            if hasattr(hc, 'keys'):
+                for key in hc.keys():
+                    outstr += '%11g ' % (hc[key],)
+            else: # just a number
+                outstr += '%11g ' % hc
     #Hnow = params.get('h0', None)
     #if Hnow is not None:
     #    outstr += '%11g ' % Hnow   

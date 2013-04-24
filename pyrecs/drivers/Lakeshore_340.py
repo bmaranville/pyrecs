@@ -14,13 +14,13 @@ class Lakeshore340(TemperatureController):
         self.settings = {
             'sample_sensor': 'A',
             'control_sensor': 'A',
-            'record': 'all',
+            'record': 'B',
             'units': 1,
             'control_loop': 1,
             'serial_port': '/dev/ttyUSB6'
             }
         valid_record = self.sensors.copy()
-        valid_record.update({'setpoint':"Setpoint", 'all':"Record all"})
+        valid_record.update({'Setpoint':"Setpoint", 'all':"Record all"})
         self.valid_settings = {
             'sample_sensor': self.sensors,
             'control_sensor': self.sensors,
@@ -58,7 +58,7 @@ class Lakeshore340(TemperatureController):
         reply = self.serial.readline().rstrip('\r\n')
         return reply
     
-    def getState(self, poll=True):
+    def getFullState(self, poll=True):
         state = {}
         for sensor in self.sensors:
             sensor_name = self.sensors[sensor]
@@ -66,6 +66,15 @@ class Lakeshore340(TemperatureController):
             state[sensor_name] = sensor_value
         state['Setpoint'] = self.getSetpoint() 
         return state
+    
+    def getState(self, poll=True):
+        fullstate = self.getFullState()
+        record = self.settings['record']
+        if record == 'all':
+            return fullstate
+        else:
+            sensor_name = self.valid_settings['record'][record]
+            return fullstate[sensor_name]
         
     def setControlLoop(self, on_off = 1):
     	""" initializes loop of temp controller, with correct control sensor etc. """
