@@ -2,7 +2,8 @@
 # order is : label, module name, class name for each driver
 temperature_controllers = [
     ['Neslab RTE7', 'NESLAB_RTE7', 'NESLAB_BATH'],
-    ['Lakeshore 331/340', 'Lakeshore_340', 'Lakeshore340'],
+    ['Lakeshore 340', 'Lakeshore_340', 'Lakeshore340'],
+    ['Lakeshore 331', 'Lakeshore_340', 'Lakeshore331'],
     ['Huber Petite Fleur', 'petite_fleur', 'PetiteFleur'],
     ['CMU Lakeshore 340 (Humidity)', 'CMU_humidity_rig', 'Lakeshore340Humidity'] ]
     
