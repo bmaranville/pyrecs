@@ -38,7 +38,11 @@ class VME:
     ################### MOTOR FUNCTIONS #######################
     def GetMotorPos(self, motornum):
         reply = self.sendCMD('motor position %d' % motornum)
-        return float(reply)
+        try:
+            result = float(reply)
+        except:
+            result = -999.99
+        return result
         
     def SetMotorPos(self, motornum, position):
         self.sendCMD('motor position %d %.4f' % (motornum, position))
