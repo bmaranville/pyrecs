@@ -6,7 +6,7 @@ class Lakeshore340(TemperatureController):
     label = 'Lakeshore 331'
     sensors = {'A': "Sensor A", 'B':"Sensor B", 'C': "Sensor C"}
     
-    def __init__(self, port = '/dev/ttyUSB6'):
+    def __init__(self, port = '/dev/ttyUSB2'):
         TemperatureController.__init__(self, port)
         """ the Temperature serial connection is on the third port at MAGIK, which is /dev/ttyUSB2 """
         self.setpoint = 0.0
@@ -96,7 +96,10 @@ class Lakeshore340(TemperatureController):
         """ retrieve the temperature of the sample thermometer """
         read_str = {1: "K", 2: "C", 3: "S"}
         reply_str = self.sendCommand('%sRDG? %s' % (read_str[self.settings['units']], sensor), reply_expected = True)
-        temperature  = float(reply_str)
+        try:
+            temperature  = float(reply_str)
+        except:
+            temperature = None
         return temperature
         
     def getAuxTemp(self):
@@ -104,7 +107,10 @@ class Lakeshore340(TemperatureController):
     
     def getSetpoint(self):
         reply_str = self.sendCommand('SETP? %d' % self.settings['control_loop'], reply_expected = True)
-        temperature  = float(reply_str)
+        try:
+            temperature  = float(reply_str)
+        except:
+            temperature = None
         return temperature
         
     def getSampleTemp(self):

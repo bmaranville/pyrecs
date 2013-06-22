@@ -191,7 +191,7 @@ class InstrumentController:
         self.motor_numbers = [m['M'] for m in self.ip.InstrCfg['motors'].values()]
         self.motor_names = ['a%d' % i for i in self.motor_numbers]
         self.motor_lookup = dict(zip(self.motor_names, self.motor_numbers))
-        
+        self._auto_motor_disable = AUTO_MOTOR_DISABLE
         
         
         VIPER_mot_line = int(self.ip.InstrCfg['VIPER_mot_line'])
@@ -729,7 +729,7 @@ class InstrumentController:
                 hard_pos = self.GetHardMotorPos(motornum)
             offset = self.ip.GetSoftMotorOffset(motornum)
             soft_pos = hard_pos - offset
-            self.write(' Soft: A%02d=%8.3f\n Hard: A%02d=%8.3f\n' % (motornum, soft_pos, motornum, hard_pos))
+            self.write(' Soft: A%02d=%8.4f\n Hard: A%02d=%8.4f\n' % (motornum, soft_pos, motornum, hard_pos))
         else:  # no motor specified - get them all
             self.PrintAllMotorPos()
     
@@ -796,8 +796,9 @@ class InstrumentController:
         #    self._aborted = False
 
 
-    def moveMultiMotor(self, motornum_list, soft_position_list, check_limits = True, reraise_exceptions = True, disable=AUTO_MOTOR_DISABLE):
+    def moveMultiMotor(self, motornum_list, soft_position_list, check_limits = True, reraise_exceptions = True, disable=None):
         """ send motor move command to VME and wait for it to complete motion """
+        disable = disable if disable is not None else self._auto_motor_disable
         motornum_list = list(motornum_list)
         soft_position_list = list(soft_position_list)
         # convert soft positions to hard positions:
@@ -1007,7 +1008,7 @@ class InstrumentController:
         return data
     
     @validate_motor
-    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, speed_ratio=1.0, step_time=0.2, client_plotter = None, reraise_exceptions = False, disable=AUTO_MOTOR_DISABLE):
+    def RapidScan_new(self, motornum = None, start_angle = None, stop_angle = None, speed_ratio=1.0, step_time=0.2, client_plotter = None, reraise_exceptions = False, disable=None):
         """ new, non-ICP function: count while moving.
                 returns: (position, counts, elapsed_time)
         
@@ -1022,6 +1023,7 @@ class InstrumentController:
         
         speed_ratio reduces the vscale on the motor for the duration of the scan, then returns it to what it was before the scan.
         """ 
+        disable = disable if disable is not None else self._auto_motor_disable
         (tmp_fd, tmp_path) = tempfile.mkstemp() #temporary file for plotting
         os.close(tmp_fd) # we'll open the file by name later
         title = 'ic.RapidScan(%d, %.4f, %.4f)' % (motornum, start_angle, stop_angle)
@@ -1249,8 +1251,8 @@ class InstrumentController:
                 self.ip.SetHardMotorPos(m, hard_pos) # update, because we can!
             offset = self.ip.GetSoftMotorOffset(m)
             soft_pos = hard_pos - offset
-            soft_line += 'A%02d=%8.3f ' % (m, soft_pos)
-            hard_line += 'A%02d=%8.3f ' % (m, hard_pos)
+            soft_line += 'A%02d=%8.4f ' % (m, soft_pos)
+            hard_line += 'A%02d=%8.4f ' % (m, hard_pos)
             #self.write(' Soft: A%02d=%7.3f\n Hard: A%02d=%7.3f' % (motornum, soft_pos, motornum, hard_pos))
             #self.write('A%02d: %.4f\t' % (i, pos))
             if ( ii % 5 == 0) or (ii >= len(self.motor_numbers)):
