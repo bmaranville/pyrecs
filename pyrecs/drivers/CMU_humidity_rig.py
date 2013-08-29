@@ -53,6 +53,7 @@ class Lakeshore340Humidity(TemperatureController):
             'control_loop': {1: "1", 2: "2"},
             'thermometer_calibration': {1: "T_raw*0.97877 - 0.86433", 2: "T_raw*0.97398 - 0.58107"},
             'serial_port': dict([('/dev/ttyUSB%d' % i, 'Serial port %d' % (i+1)) for i in range(4, 16)]),
+            #'serial_port': {"/dev/ttyS0": "/dev/ttyS0"}
             }
     
     def updateSettings(self, keyword, value):

@@ -1,9 +1,36 @@
 from pyrecs.drivers.brookhaven_psd import BrookhavenDetector
 from pyrecs.drivers.nisto import NISTO
+import collections
 import time
 
 INSTALLED_PSD = NISTO
 MAX_RETRIES = 5
+
+def update(d, u):
+    """ recursive dictionary update """
+    for k, v in u.iteritems():
+        if isinstance(v, collections.Mapping):
+            r = update(d.get(k, {}), v)
+            d[k] = r
+        else:
+            d[k] = u[k]
+    return d
+
+ICP_CONVERSIONS = {
+    'arg_commands': {
+        'pasd': { 'numargs': [0], 'pyrecs_cmd': 'PrintROI' },
+        'xmin': { 'numargs': [1], 'pyrecs_cmd': 'SetXmin' },
+        'xmax': { 'numargs': [1], 'pyrecs_cmd': 'SetXmax' },
+        'ymin': { 'numargs': [1], 'pyrecs_cmd': 'SetYmin' },
+        'ymax': { 'numargs': [1], 'pyrecs_cmd': 'SetYmax' }
+    },
+        
+    'en_dis_commands': {},
+
+    'increment_commands': {},
+
+    'tied_commands': {},
+}
 
 class PSDControlMixin:
     """ 
@@ -27,6 +54,7 @@ class PSDControlMixin:
         self.ymax = self.SetYmax
         
         self.setPSDActive(True) #start with psd when activated
+        self.icp_conversions = update(self.icp_conversions, ICP_CONVERSIONS)
         
     def getPSDActive(self):
         """ Returns true if the PSD is the active counter """
@@ -81,8 +109,8 @@ class PSDControlMixin:
         xmin, ymin, xmax, ymax, numx, numy = self.ip.GetROI()
         
         # overwriting the counts from the scaler with the ones from the PSD:
-        #counts = (psd_data[xmin:xmax+1,ymin:ymax+1]).sum() # psd_data is a numpy array, with sum method available
-        counts = psd_data.sum()
+        counts = (psd_data[xmin:xmax+1,ymin:ymax+1]).sum() # psd_data is a numpy array, with sum method available
+        #counts = psd_data.sum()
         result = {'count_time': count_time, 'monitor': monitor, 'counts': counts, 'elapsed_time': elapsed_time, 'psd_data': psd_data}
         self.state['result'].update(result)
         return result

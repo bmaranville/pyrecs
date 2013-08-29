@@ -14,7 +14,7 @@ DET_SIZE = DET_DIMX * DET_DIMY;
 # that preceed the returned data block.
 
 # This could probably be raised to 65536/bytes_per_int = 16384
-XFER_BLOCK_SIZE = 2048;
+XFER_BLOCK_SIZE = 1024;
 MAXBUF = 2**16
 
 """ All of the following constants were lifted straight from the DALI driver """
@@ -147,7 +147,7 @@ class NISTO:
         self.dims = None
         self.data = None
         self.xmin = 1 # window default values - doesn't set dimensions of data
-        self.xmax = 608
+        self.xmax = 512
         self.ymin = 1
         self.ymax = 512
         
