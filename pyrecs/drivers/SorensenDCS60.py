@@ -276,4 +276,17 @@ class SorensenNew(MagnetController):
         self.sendCommand('SOUR:CURR:RAMP ' + curr_str + ' ' + t_change_str, reply_expected = False)
         time.sleep(t_change)
         return
+        
+    def setOvervoltageLimit(self, overvoltage=10):
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        ov_str = 'SOUR:VOLT:PROT %.2f' % (overvoltage,)
+        self.sendCommand(ov_str, reply_expected = False)
+        return
+        
+    def getOvervoltageLimit(self):
+        if self.check_errors: self.err_state = self.sendCommand('SYST:ERR?', reply_expected = True)
+        reply_str = self.sendCommand('SOUR:VOLT:PROT?', reply_expected = True)
+        self.overvoltage_limit = float(reply_str)
+        return self.overvoltage_limit
+        
       
