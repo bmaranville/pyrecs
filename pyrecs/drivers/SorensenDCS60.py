@@ -192,7 +192,7 @@ class SorensenNew(MagnetController):
         self.serial = serial.Serial(self.settings['serial_port'], 9600, parity='N', rtscts=False, xonxoff=False, timeout=1)
         
     def initGPIB(self):
-        self.gpib = rs232gpib.RS232GPIB(serial_port = self.settings['serial_to_gpib_port'])
+        self.gpib = rs232gpib.RS232GPIB_new(serial_port = self.settings['serial_to_gpib_port'])
     
     def sendSerialCommand(self, command = None, reply_expected = False):
         if self.serial is None:

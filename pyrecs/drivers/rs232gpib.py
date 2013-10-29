@@ -47,7 +47,7 @@ class RS232GPIB:
         #self.sendReset()
         #self.setListener(gpib_addr)
         #self.setTalker(0) # self
-        self.serial.write('wr '+str(gpib_addr)+'\n;'+text_cmd+';\r')
+        self.serial.write('wr '+str(gpib_addr)+'\r'+text_cmd+';\r')
         if DEBUG: self.session += 'wr '+str(gpib_addr)+'\n;'+text_cmd+';\r'
         self.serial.flush()
         #self.sendReset()
@@ -72,11 +72,19 @@ class RS232GPIB_new(object):
         self.session = ''
         self._isController = False
     
+    def setAsController(self):
+        self.serial.write('sic\r')
+        self.serial.flush()
+    
+    def clearGPIB(self, gpib_addr):
+        self.serial.write('clr %d\r' % (gpib_addr,))
+        self.serial.flush()
+    
     def sendCommand(self, gpib_addr, text_cmd):
         if not self._isController:
             self.setAsController()
             self._isController = True
-        self.serial.write('wr '+str(gpib_addr)+'\n;'+text_cmd+';\r')
+        self.serial.write('wr '+str(gpib_addr)+'\r'+text_cmd+';\r')
         if DEBUG: self.session += 'wr '+str(gpib_addr)+'\n;'+text_cmd+';\r'
         self.serial.flush()
     
@@ -113,3 +121,6 @@ B^Mcmd
 ;IOUT?;^Mcmd
 ?^Mcmd
 """
+
+# Note that the clear function is 'clr <gpibaddr>\r' which should resynch devices.
+
