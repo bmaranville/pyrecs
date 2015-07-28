@@ -1,13 +1,21 @@
 import serial
+from pyrecs.persistent_dict import PersistentDict
 DEBUG = False
 
-class EBB:
+class EBBmotor(object):
+    def __init__(self, initial_position=0):
+        self.
+
+class EBB(object):
     """Talk to the EiBotBoard"""
     def __init__(self, port):
         self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=2)
         self.newline_str = '\r\n'
         self.max_resends = 1
         self.maxmotors = 2
+        se
+        self.current_positions = []
+        self.
     
     def readline(self):
         line = ''
