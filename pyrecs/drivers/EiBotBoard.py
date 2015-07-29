@@ -1,27 +1,38 @@
 import serial
-from pyrecs.persistent_dict import PersistentDict
+from persistent_dict import PersistentDict
+import os
+# we will store the motor state in the home directory under $HOME/.pyrecs/EBBMotorState.json
 DEBUG = False
-
-class EBBmotor(object):
-    def __init__(self, initial_position=0):
-        self.
+DEFAULT_STORE = os.path.join(os.getenv('HOME'), '.pyrecs')
+DEFAULT_PPD = 200.0 * 16 / 360 # 200 steps per revolution, 16 pulses per step
+DEFAULT_MOTOR_CONFIG = {"pulses": 0, "enabled": False, "speed": 1.0, "pulsesPerDegree": DEFAULT_PPD})
 
 class EBB(object):
     """Talk to the EiBotBoard"""
-    def __init__(self, port):
+
+    def __init__(self, port, storedir=DEFAULT_STORE):
         self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=2)
         self.newline_str = '\r\n'
+        self.storedir = storedir
         self.max_resends = 1
         self.maxmotors = 2
-        se
-        self.current_positions = []
-        self.
+        if not os.path.isdir(storedir):
+            os.mkdir(storedir)
+        self.persistent_state = PersistentDict(os.path.join(self.storedir, "EBBMotorState.json"), format="json")
+        # initialize motor states if they are not there already
+        self.persistent_state.setdefault("1", DEFAULT_MOTOR_CONFIG)
+        self.persistent_state.setdefault("2", DEFAULT_MOTOR_CONFIG)
+        self.persistent_state.sync()
     
     def readline(self):
+        # with this board, always seems to be 2 delimiters but the order varies.
         line = ''
         reply = ''
-        while not reply == self.newline_str:
+        delim_count=0
+        while delim_count < 2:
             reply = self.serial.read(1)
+            if reply == '\r' or reply == '\n':
+                delim_count += 1
             line += reply
         return line
         
@@ -37,85 +48,64 @@ class EBB(object):
         if DEBUG: print 'reply = ' + str(reply)
         self.reply = reply
         self.serial.flush()
-        if not self.reply[:3] == 'OK:':
-            if resend_number < self.max_resends:
-                self.sendCMD(text_cmd, resend_number+1)
-            else:
-                raise Exception('Max resends exceeded (%d) and VME says something bad: %s' % (resend_number, reply))
-        return reply[3:].rstrip()
+        return reply.rstrip()
     
     ################### MOTOR FUNCTIONS #######################
     def GetMotorPos(self, motornum):
-        reply = self.sendCMD('motor position %d' % motornum)
-        try:
-            result = float(reply)
-        except:
-            result = -999.99
-        return result
+        state = self.persistent_state[str(motornum)]
+        pulses = state["pulses"]
+        ppd = state["pulsesPerDegree"]
+        position = float(pulses) / ppd
+        return position
         
     def SetMotorPos(self, motornum, position):
-        self.sendCMD('motor position %d %.4f' % (motornum, position))
+        state = self.persistent_state[str(motornum)]
+        ppd = float(state["pulsesPerDegree"])
+        new_pulses = int(position * ppd)
+        self.persistent_state[str(motornum)]["pulses"] = new_pulses
+        self.persistent_state.sync()
         
     def EnableMotor(self, motornum):
-        self.sendCMD('motor enable %d' % motornum)
+        # this is done by the board with every move command;
+        # the command would be "EM,<enable 1>,<enable 2>\r\n"
+        self.persistent_state[str(motornum)]["enabled"] = True
+        self.persistent_state.sync()
+        self.pushEnabledState()
         
     def DisableMotor(self, motornum):
-        self.sendCMD('motor disable %d' % motornum)
+        self.persistent_state[str(motornum)]["enabled"] = True
+        self.persistent_state.sync()
+        self.pushEnabledState()
+    
+    def pushEnabledState(self):
+        m1en = 1 if self.persistent_state["1"]["enabled"] else 0
+        m2en = 1 if self.persistent_state["2"]["enabled"] else 0
+        self.sendCMD("EM,%d,%d" % (m1en, m2en))
         
     def MoveMotor(self, motornum, position):
-        self.sendCMD('motor move %d %.4f' % (motornum, position))
+        state = self.persistent_state[str(motornum)]
+        ppd = float(state["pulsesPerDegree"])
+        new_pulses = int(position * ppd)
+        pulses = int(state["pulses"])
+        speed = float(state["speed"])
+
+        pdelta = new_pulses - pulses
+        posdelta = pdelta / ppd
+        tdelta = int(posdelta / speed * 1000.0) # milliseconds
+        axes = {"1": 0, "2",0} # motor move distance
+        axes[str(motornum)] = pdelta
+        self.sendCMD("SM,%d,%d,%d" % (tdelta, axes["1"], axes["2"]))
+        self.persistent_state[str(motornum)]["pulses"] = new_pulses
+        self.persistent_state.sync()
         
     def StopMotor(self, motornum):
-        self.sendCMD('motor stop %d' % motornum)
+        print "not implemented: no stopping with EBB!"
         
     def CheckHardwareLimits(self, motornum):
-        reply = self.sendCMD('motor limits %d' % motornum)
-        if reply == '1': 
-            return True
-        else: 
-            return False
+        return False
             
     def CheckMoving(self, motornum):
         reply = self.sendCMD('QM')
         moving = reply.split(',')[motornum+1] == '1'
         return moving
-        
-    def GetAllMotorPositions(self):
-        reply = self.sendCMD('set return_values {};foreach axis $mc(defined) {lappend return_values [motor position ${axis}]};join $return_values ";"')
-        return map(float, reply.split(";"))
             
-    #################### DETECTOR FUNCTIONS #########################
-    def CountByTime(self, duration):
-        self.sendCMD('scaler time %d' % duration)
-        
-    def CountByMonitor(self, monitor_counts):
-        self.sendCMD('scaler monitor %d' % monitor_counts)
-        
-    def ResetScaler(self):
-        self.sendCMD('scaler reset')
-        
-    def IsCounting(self):
-        reply = self.sendCMD('scaler status')
-        if reply == '1':
-            return True
-        else:
-            return False
-        
-    def AbortCount(self):
-        self.sendCMD('scaler abort')
-        
-    def GetElapsed(self):
-        reply = self.sendCMD('scaler elapsed')
-        if reply:
-            reply = float(reply)
-        else: 
-            reply = None
-        return reply
-        
-    def GetCounts(self):
-        reply = self.sendCMD('scaler read')
-        pieces = reply.split()
-        count_time = float(pieces[0])
-        monitor = float(pieces[1])
-        counts = float(pieces[2])
-        return count_time, monitor, counts
