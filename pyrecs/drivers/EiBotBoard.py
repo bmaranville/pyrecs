@@ -10,7 +10,7 @@ DEFAULT_MOTOR_CONFIG = {"pulses": 0, "enabled": False, "speed": 1.0, "pulsesPerD
 class EBB(object):
     """Talk to the EiBotBoard"""
 
-    def __init__(self, port, storedir=DEFAULT_STORE):
+    def __init__(self, port="/dev/ttyACM0", storedir=DEFAULT_STORE):
         self.serial = serial.Serial(port, 9600, parity='N', rtscts=False, xonxoff=False, timeout=2)
         self.newline_str = '\r\n'
         self.storedir = storedir
@@ -23,6 +23,7 @@ class EBB(object):
         self.persistent_state.setdefault("1", DEFAULT_MOTOR_CONFIG)
         self.persistent_state.setdefault("2", DEFAULT_MOTOR_CONFIG)
         self.persistent_state.sync()
+        self.pushEnabledState()
     
     def readline(self):
         # with this board, always seems to be 2 delimiters but the order varies.
