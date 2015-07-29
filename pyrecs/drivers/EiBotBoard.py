@@ -2,10 +2,10 @@ import serial
 from persistent_dict import PersistentDict
 import os
 # we will store the motor state in the home directory under $HOME/.pyrecs/EBBMotorState.json
-DEBUG = False
+DEBUG = True
 DEFAULT_STORE = os.path.join(os.getenv('HOME'), '.pyrecs')
 DEFAULT_PPD = 200.0 * 16 / 360 # 200 steps per revolution, 16 pulses per step
-DEFAULT_MOTOR_CONFIG = {"pulses": 0, "enabled": False, "speed": 1.0, "pulsesPerDegree": DEFAULT_PPD})
+DEFAULT_MOTOR_CONFIG = {"position": 0.0, "pzero_position": 0.0, "pulses": 0, "enabled": False, "speed": 1.0, "pulsesPerDegree": DEFAULT_PPD}
 
 class EBB(object):
     """Talk to the EiBotBoard"""
@@ -54,16 +54,12 @@ class EBB(object):
     ################### MOTOR FUNCTIONS #######################
     def GetMotorPos(self, motornum):
         state = self.persistent_state[str(motornum)]
-        pulses = state["pulses"]
-        ppd = state["pulsesPerDegree"]
-        position = float(pulses) / ppd
-        return position
-        
+        return state["position"]
+                
     def SetMotorPos(self, motornum, position):
-        state = self.persistent_state[str(motornum)]
-        ppd = float(state["pulsesPerDegree"])
-        new_pulses = int(position * ppd)
-        self.persistent_state[str(motornum)]["pulses"] = new_pulses
+        self.persistent_state[str(motornum)]["pzero_position"] = position
+        self.persistent_state[str(motornum)]["position"] = position
+        self.persistent_state[str(motornum)]["pulses"] = 0
         self.persistent_state.sync()
         
     def EnableMotor(self, motornum):
@@ -74,7 +70,7 @@ class EBB(object):
         self.pushEnabledState()
         
     def DisableMotor(self, motornum):
-        self.persistent_state[str(motornum)]["enabled"] = True
+        self.persistent_state[str(motornum)]["enabled"] = False
         self.persistent_state.sync()
         self.pushEnabledState()
     
@@ -86,17 +82,25 @@ class EBB(object):
     def MoveMotor(self, motornum, position):
         state = self.persistent_state[str(motornum)]
         ppd = float(state["pulsesPerDegree"])
-        new_pulses = int(position * ppd)
+        pzero = float(state["pzero_position"])
         pulses = int(state["pulses"])
         speed = float(state["speed"])
+        old_pos = (float(pulses) / ppd) + pzero
 
-        pdelta = new_pulses - pulses
-        posdelta = pdelta / ppd
-        tdelta = int(posdelta / speed * 1000.0) # milliseconds
-        axes = {"1": 0, "2",0} # motor move distance
+        posdelta = float(position - old_pos)
+        pdelta = int(posdelta * ppd)
+        new_pulses = pulses + pdelta
+        tdelta = int(abs(posdelta / speed * 1000.0)) # milliseconds
+        axes = {"1": 0, "2": 0} # motor move distance
         axes[str(motornum)] = pdelta
+        if self.CheckAnyMoving():
+            return "error: already moving"
         self.sendCMD("SM,%d,%d,%d" % (tdelta, axes["1"], axes["2"]))
         self.persistent_state[str(motornum)]["pulses"] = new_pulses
+        actual_pos = (float(new_pulses) / ppd) + pzero
+        self.persistent_state[str(motornum)]["position"] = actual_pos
+        self.persistent_state["1"]["enabled"] = True
+        self.persistent_state["2"]["enabled"] = True        
         self.persistent_state.sync()
         
     def StopMotor(self, motornum):
@@ -104,7 +108,12 @@ class EBB(object):
         
     def CheckHardwareLimits(self, motornum):
         return False
-            
+           
+    def CheckAnyMoving(self):
+        reply = self.sendCMD('QM')
+        moving = reply.split(',')[1].strip() == '1'
+        return moving
+        
     def CheckMoving(self, motornum):
         reply = self.sendCMD('QM')
         moving = reply.split(',')[motornum+1] == '1'
