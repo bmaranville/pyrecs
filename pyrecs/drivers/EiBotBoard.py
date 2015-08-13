@@ -2,10 +2,26 @@ import serial
 from persistent_dict import PersistentDict
 import os
 # we will store the motor state in the home directory under $HOME/.pyrecs/EBBMotorState.json
-DEBUG = True
+DEBUG = False
 DEFAULT_STORE = os.path.join(os.getenv('HOME'), '.pyrecs')
-DEFAULT_PPD = 200.0 * 16 / 360 # 200 steps per revolution, 16 pulses per step
-DEFAULT_MOTOR_CONFIG = {"position": 0.0, "pzero_position": 0.0, "pulses": 0, "enabled": False, "speed": 1.0, "pulsesPerDegree": DEFAULT_PPD}
+DEFAULT_SPD = 200.0 * 16 / 360 # 200 * 16 steps per revolution (smallest microstep possible)
+DEFAULT_MOTOR_CONFIG = {
+    "position": 0.0, 
+    "stepzero_position": 0.0, 
+    "steps": 0,
+    "enabled": False,
+    "speed": 25.0,
+    "stepsPerDegree": DEFAULT_SPD
+}
+MICROSTEPS_CODES = {
+    # for EBB v1.2 and above
+    16: 1,
+    8: 2,
+    4: 3,
+    2: 4,
+    1: 5
+}
+EBB_MAX_CURRENT = 1.25 # Amps
 
 class EBB(object):
     """Talk to the EiBotBoard"""
@@ -22,6 +38,7 @@ class EBB(object):
         # initialize motor states if they are not there already
         self.persistent_state.setdefault("1", DEFAULT_MOTOR_CONFIG)
         self.persistent_state.setdefault("2", DEFAULT_MOTOR_CONFIG)
+        self.persistent_state.setdefault("microsteps", 16) # must use the same value for both motors
         self.persistent_state.sync()
         self.pushEnabledState()
     
@@ -50,6 +67,14 @@ class EBB(object):
         self.reply = reply
         self.serial.flush()
         return reply.rstrip()
+        
+    def GetCurrent(self):
+        """ get the output current to the motor
+        (changed by pot on EBB surface) """
+        result = self.sendCMD("QC")
+        currint, V0 = result.split(',')
+        curr = float(currint) / 1023.0 * EBB_MAX_CURRENT
+        return curr
     
     ################### MOTOR FUNCTIONS #######################
     def GetMotorPos(self, motornum):
@@ -57,9 +82,9 @@ class EBB(object):
         return state["position"]
                 
     def SetMotorPos(self, motornum, position):
-        self.persistent_state[str(motornum)]["pzero_position"] = position
+        self.persistent_state[str(motornum)]["stepzero_position"] = position
         self.persistent_state[str(motornum)]["position"] = position
-        self.persistent_state[str(motornum)]["pulses"] = 0
+        self.persistent_state[str(motornum)]["steps"] = 0
         self.persistent_state.sync()
         
     def EnableMotor(self, motornum):
@@ -75,29 +100,43 @@ class EBB(object):
         self.pushEnabledState()
     
     def pushEnabledState(self):
-        m1en = 1 if self.persistent_state["1"]["enabled"] else 0
-        m2en = 1 if self.persistent_state["2"]["enabled"] else 0
+        microsteps = self.persistent_state["microsteps"]
+        if not (microsteps in MICROSTEPS_CODES):
+            error_msg = "error: inconsistent microsteps number %d\n" % (microsteps,)
+            error_msg += "\nAllowed values: %s" % (str(MICROSTEPS_CODES.keys()))
+            print(error_msg)
+            return
+        
+        enableCode = MICROSTEPS_CODES[microsteps]
+            
+        m1en = enableCode if self.persistent_state["1"]["enabled"] else 0
+        m2en = enableCode if self.persistent_state["2"]["enabled"] else 0
         self.sendCMD("EM,%d,%d" % (m1en, m2en))
         
     def MoveMotor(self, motornum, position):
         state = self.persistent_state[str(motornum)]
-        ppd = float(state["pulsesPerDegree"])
-        pzero = float(state["pzero_position"])
-        pulses = int(state["pulses"])
+        microsteps = int(self.persistent_state["microsteps"])
+        spd = float(state["stepsPerDegree"])
+        szero = float(state["stepzero_position"])
+        steps = int(state["steps"])
         speed = float(state["speed"])
-        old_pos = (float(pulses) / ppd) + pzero
+        old_pos = (float(steps) / spd) + szero
 
         posdelta = float(position - old_pos)
-        pdelta = int(posdelta * ppd)
-        new_pulses = pulses + pdelta
+        pdelta = int(posdelta * spd * microsteps/16)
+        new_steps = steps + int(pdelta * 16/microsteps)
         tdelta = int(abs(posdelta / speed * 1000.0)) # milliseconds
         axes = {"1": 0, "2": 0} # motor move distance
         axes[str(motornum)] = pdelta
+        if pdelta == 0:
+            print("already there.")
+            return
         if self.CheckAnyMoving():
-            return "error: already moving"
+            print("error: already moving")
+            return
         self.sendCMD("SM,%d,%d,%d" % (tdelta, axes["1"], axes["2"]))
-        self.persistent_state[str(motornum)]["pulses"] = new_pulses
-        actual_pos = (float(new_pulses) / ppd) + pzero
+        self.persistent_state[str(motornum)]["steps"] = new_steps
+        actual_pos = (float(new_steps) / spd) + szero
         self.persistent_state[str(motornum)]["position"] = actual_pos
         self.persistent_state["1"]["enabled"] = True
         self.persistent_state["2"]["enabled"] = True        
@@ -116,6 +155,6 @@ class EBB(object):
         
     def CheckMoving(self, motornum):
         reply = self.sendCMD('QM')
-        moving = reply.split(',')[motornum+1] == '1'
+        moving = reply.split(',')[motornum+1].strip() == '1'
         return moving
             
