@@ -143,7 +143,11 @@ class EBB(object):
         self.persistent_state.sync()
         
     def StopMotor(self, motornum):
-        print "not implemented: no stopping with EBB!"
+        print("stopping...")
+        self.sendCMD('ES')
+        #self.sendCMD('EM,0,0')
+        #self.pushEnabledState()
+        #print "not implemented: no stopping with EBB!"
         
     def CheckHardwareLimits(self, motornum):
         return False

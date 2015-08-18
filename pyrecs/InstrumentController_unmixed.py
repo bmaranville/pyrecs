@@ -28,7 +28,6 @@ from ICPSequenceFile import PyICPSequenceFile, PyICPSequenceStringIO
 from pyrecs.icp_compat import ibuffer
 from pyrecs.icp_compat.icp_to_pyrecs_table import ICP_CONVERSIONS
 from InstrumentParameters import InstrumentParameters
-from pyrecs.drivers.VME import VME
 import pyrecs.drivers
 from pyrecs.publishers import update_xpeek
 from pyrecs.publishers import ICPDataFile, publisher
@@ -61,6 +60,49 @@ class Publisher:
     def publish_end(self, state, scan_definition, **kwargs):
         """ called when measurement complete - archive finished """
         pass
+
+class GenericScaler(object):
+    """ generic counter/scaler """
+    def __init__(self, *args, **kwargs):
+        self.CountByMonitor = self.notImplemented
+        self.CountByTime = self.notImplemented
+        self.IsCounting = self.notImplemented
+        self.GetElapsed = self.notImplemented
+        self.AbortCount = self.notImplemented
+        self.ResetScaler = self.notImplemented
+                
+    def notImplemented(self, *args, **kwargs):
+        print("fake scaler: does nothing")
+        return 0
+   
+    def GetCounts(self, *args, **kwargs):
+        print("fake scaler: does nothing")
+        return 0,0,0
+        
+    def CountByTime(self, preset, **kwargs):
+        time.sleep(abs(preset))
+        print("fake scaler: does nothing")
+        
+    def Count(self, preset, **kwargs):
+        time.sleep(abs(preset))
+        print("fake scaler: does nothing")
+        result = {'count_time': preset, 'monitor': preset, 'counts': 1, 'elapsed_time': preset, 'psd_data': 0}
+        return result
+        
+class GenericMotorController(object):
+    def __init__(self):
+        self.MoveMotor = self.notImplemented
+        self.GetMotorPos = self.notImplemented
+        self.SetMotorPos = self.notImplemented
+        self.CheckMoving = self.notImplemented
+        self.CheckHardwareLimits = self.notImplemented
+        self.DisableMotor = self.notImplemented
+        self.EnableMotor = self.notImplemented
+        self.StopMotor = self.notImplemented
+
+    def notImplemented(self, *args, **kwargs):
+        print("fake motor controller: does nothing")
+        return 0      
  
 class Fitter:
     """ generic fitting.  Give a function (string) and parameter names with default values """
@@ -195,10 +237,10 @@ class InstrumentController:
         
         
         VIPER_mot_line = int(self.ip.InstrCfg['VIPER_mot_line'])
-        vme = VME(port = self.ip.GetSerialPort(VIPER_mot_line)) # initialize the VME box (motors, scaler)
+        #vme = VME(port = self.ip.GetSerialPort(VIPER_mot_line)) # initialize the VME box (motors, scaler)
         
-        self.scaler = vme # counter controller
-        self.mc = vme # motor controller, happens to be same as counter controller right now
+        self.scaler = GenericScaler() # counter controller
+        self.mc = GenericMotorController() # motor controller, happens to be same as counter controller right now
         self.psd = None
         term_line = int(self.ip.InstrCfg['term_line,'])
             
@@ -248,7 +290,7 @@ class InstrumentController:
 
         self.sequence = StringIO() # empty sequence to start
         
-        self.Count = self.PencilCount
+        self.Count = self.scaler.Count
         # command alias list: these commands will come in from the filter
         # ICP commands:
         

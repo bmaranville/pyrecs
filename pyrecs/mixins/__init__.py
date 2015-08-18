@@ -4,5 +4,7 @@ __all__ = [
     'he3characterize_mixin', 
     'photometer_count', 
     'monochromator_blades_mixin',
-    'protected_thread'
+    'protected_thread',
+    'VIPER_scaler_mixin',
+    'EggBot_motor_mixin'
 ]

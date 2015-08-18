@@ -2,8 +2,9 @@ import struct, time
 from ordered_dict import OrderedDict
 import os
 #home_dir = os.environ['HOME']
-home_dir = '/usr/local/icp/cfg/'
+#home_dir = '/usr/local/icp/cfg/'
 #home_dir = os.path.join(os.path.dirname(__file__), 'icp_compat', 'MAGIK_cfg')
+home_dir = os.path.join(os.path.dirname(__file__), 'icp_compat', 'OpticalRefl_cfg')
 
 DEFAULT_VME_PORT = '/dev/ttyUSB0'
 DEBUG = False

@@ -1,7 +1,7 @@
 from __future__ import with_statement
 import time, math, os
 
-MONITOR_REC = '/home/NIST/ncnr/bbm/MONITOR.REC'
+MONITOR_REC = os.path.join(os.environ['HOME'], 'MONITOR.REC')
 
 class FileManifest:
     """ 
