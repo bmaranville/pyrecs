@@ -218,5 +218,5 @@ class Motor:
              
         
 if __name__ == '__main__':
-    vme = VME('/dev/ttyUSB1')
+    vme = serialVME('/dev/ttyUSB1')
     vme.start()     
