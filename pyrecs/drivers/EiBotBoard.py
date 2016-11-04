@@ -86,6 +86,7 @@ class EBB(object):
         self.persistent_state[str(motornum)]["position"] = position
         self.persistent_state[str(motornum)]["steps"] = 0
         self.persistent_state.sync()
+        return 0
         
     def EnableMotor(self, motornum):
         # this is done by the board with every move command;
@@ -93,11 +94,16 @@ class EBB(object):
         self.persistent_state[str(motornum)]["enabled"] = True
         self.persistent_state.sync()
         self.pushEnabledState()
+        return 1
+        
+    def GetEnabled(self, motornum):
+        return self.persistent_state[str(motornum)]["enabled"]
         
     def DisableMotor(self, motornum):
         self.persistent_state[str(motornum)]["enabled"] = False
         self.persistent_state.sync()
         self.pushEnabledState()
+        return 0
     
     def pushEnabledState(self):
         microsteps = self.persistent_state["microsteps"]
@@ -143,11 +149,12 @@ class EBB(object):
         self.persistent_state.sync()
         
     def StopMotor(self, motornum):
-        print("stopping...")
+        #print("stopping...")
         self.sendCMD('ES')
         #self.sendCMD('EM,0,0')
         #self.pushEnabledState()
         #print "not implemented: no stopping with EBB!"
+        return 0
         
     def CheckHardwareLimits(self, motornum):
         return False
